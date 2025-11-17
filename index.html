@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebP Converter Pro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-magic me-2"></i>WebP Converter</h3>
+            <button class="sidebar-close" id="sidebarClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-section="converter">
+                <i class="fas fa-magic"></i>
+                <span>Converter</span>
+            </a>
+            <a href="#" class="nav-item" data-section="tools">
+                <i class="fas fa-tools"></i>
+                <span>Advanced Tools</span>
+            </a>
+            <a href="#" class="nav-item" data-section="history">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </a>
+            <a href="#" class="nav-item" data-section="stats">
+                <i class="fas fa-chart-bar"></i>
+                <span>Statistics</span>
+            </a>
+        </nav>
+
+        <!-- Quick Stats in Sidebar -->
+        <div class="sidebar-stats">
+            <div class="sidebar-stat-item">
+                <i class="fas fa-images"></i>
+                <div class="stat-info">
+                    <div class="stat-label">Total Conversions</div>
+                    <div class="stat-value" id="sidebarTotalConversions">0</div>
+                </div>
+            </div>
+            <div class="sidebar-stat-item">
+                <i class="fas fa-save"></i>
+                <div class="stat-info">
+                    <div class="stat-label">Space Saved</div>
+                    <div class="stat-value" id="sidebarSpaceSaved">0 MB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+            <small>WebP Converter Pro v1.0</small>
+        </div>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Main Content Wrapper -->
+        <div class="main-content-wrapper">
+            <!-- Converter Section -->
+            <div class="content-section active" id="converterSection">
+                <div class="main-container">
+                    <header class="hero-header">
+                        <div class="hero-content">
+                            <h1><i class="fas fa-magic me-3"></i>Image to WebP Converter</h1>
+                            <p class="subtitle">Convert your images to WebP format and save up to 90% space!</p>
+                            <div class="supported-formats">
+                                <span class="format-badge">JPG → WebP</span>
+                                <span class="format-badge">JPEG → WebP</span>
+                                <span class="format-badge">PNG → WebP</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="content-section-inner">
+                        <!-- Upload Zone -->
+                        <div class="upload-zone" id="uploadZone">
+                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            <h3>Drop your images here</h3>
+                            <p>Or click to select JPG, JPEG, PNG files</p>
+                            <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png" class="d-none">
+                        </div>
+
+                        <!-- URL Upload Section -->
+                        <div class="url-upload-section mt-4" id="urlUploadSection" style="display: none;">
+                            <div class="url-upload-header">
+                                <i class="fas fa-link me-2"></i>Upload from URL
+                            </div>
+                            <div class="url-input-group">
+                                <input type="text" id="urlInput" class="url-input" placeholder="Paste image URL here (e.g., https://example.com/image.jpg)">
+                                <button class="url-add-btn" id="urlAddBtn">
+                                    <i class="fas fa-plus me-1"></i>Add URL
+                                </button>
+                            </div>
+                            <div class="url-list" id="urlList"></div>
+                        </div>
+
+                        <!-- Toggle URL Upload Button -->
+                        <div class="text-center mt-3">
+                            <button class="btn-custom btn-secondary" id="toggleUrlUpload">
+                                <i class="fas fa-link me-2"></i>Upload from URL
+                            </button>
+                        </div>
+
+                        <!-- Quality Control -->
+                        <div class="quality-control d-none" id="qualityControl">
+                            <div class="quality-header">
+                                <h4><i class="fas fa-sliders-h me-2"></i>WebP Quality</h4>
+                                <div class="quality-value" id="qualityValue">80%</div>
+                            </div>
+                            <input type="range" id="qualitySlider" class="quality-slider" min="10" max="100" value="80">
+                            <div class="text-center mt-3">
+                                <small class="text-muted">Higher quality = larger file size</small>
+                            </div>
+                            
+                            <!-- Conversion Mode Selector -->
+                            <div class="resize-option mt-4">
+                                <div class="conversion-mode-label">
+                                    <i class="fas fa-cog me-2"></i>Conversion Mode
+                                </div>
+                                <div class="segmented-control">
+                                    <input type="radio" name="conversionMode" id="modeWebpOnly" value="webp" checked>
+                                    <label for="modeWebpOnly">
+                                        <span class="option-title">WebP Only</span>
+                                        <span class="option-subtitle">Convert format</span>
+                                    </label>
+                                    
+                                    <input type="radio" name="conversionMode" id="modeResizeOnly" value="resize">
+                                    <label for="modeResizeOnly">
+                                        <span class="option-title">Resize Only</span>
+                                        <span class="option-subtitle">Keep original format</span>
+                                    </label>
+                                    
+                                    <input type="radio" name="conversionMode" id="modeBoth" value="both">
+                                    <label for="modeBoth">
+                                        <span class="recommended-badge">BEST</span>
+                                        <span class="option-title">Both</span>
+                                        <span class="option-subtitle">Maximum savings!</span>
+                                    </label>
+                                </div>
+                                <div class="conversion-info">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <span id="conversionModeInfo">Images will be converted to WebP format</span>
+                                </div>
+                            </div>
+
+                            <!-- Batch Rename Section -->
+                            <div class="batch-rename-section mt-4">
+                                <div class="rename-header">
+                                    <i class="fas fa-pen me-2"></i>Batch Rename (Optional)
+                                </div>
+                                <div class="rename-input-group">
+                                    <input type="text" id="renamePrefix" class="rename-input" placeholder="e.g., cleaning_windows">
+                                    <div class="rename-preview" id="renamePreview">
+                                        <small class="text-muted">Leave empty to keep original names</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- EXIF Data Option -->
+                            <div class="exif-option mt-4">
+                                <div class="form-check form-switch d-flex justify-content-center align-items-center">
+                                    <input class="form-check-input me-3" type="checkbox" id="preserveExif" style="transform: scale(1.2);">
+                                    <label class="form-check-label" for="preserveExif" style="font-weight: 500; color: #333;">
+                                        <i class="fas fa-camera me-2"></i>Preserve EXIF metadata
+                                    </label>
+                                </div>
+                                <div class="text-center mt-2">
+                                    <small class="text-muted">Uncheck for smaller files and better privacy</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons d-none" id="actionButtons">
+                            <button class="btn-custom" id="convertBtn">
+                                <i class="fas fa-magic me-2"></i>Start Conversion
+                            </button>
+                            <button class="btn-custom btn-secondary" id="clearBtn">
+                                <i class="fas fa-trash me-2"></i>Clear All
+                            </button>
+                            <button class="btn-custom btn-success d-none" id="downloadAllBtn">
+                                <i class="fas fa-download me-2"></i>Download All as ZIP
+                            </button>
+                        </div>
+
+                        <!-- Bulk Actions -->
+                        <div class="bulk-actions d-none" id="bulkActions">
+                            <div class="bulk-actions-header">
+                                <i class="fas fa-tasks me-2"></i>Bulk Actions
+                            </div>
+                            <div class="bulk-buttons">
+                                <button class="bulk-btn" id="sortBySizeBtn">
+                                    <i class="fas fa-sort-amount-down me-1"></i>Sort by Size
+                                </button>
+                                <button class="bulk-btn" id="sortBySavingsBtn">
+                                    <i class="fas fa-percent me-1"></i>Sort by Savings
+                                </button>
+                                <button class="bulk-btn danger" id="removeFailedBtn">
+                                    <i class="fas fa-times-circle me-1"></i>Remove Failed
+                                </button>
+                                <button class="bulk-btn" id="reconvertFailedBtn">
+                                    <i class="fas fa-redo me-1"></i>Reconvert Failed
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Progress Section -->
+                        <div class="progress-section d-none" id="progressSection">
+                            <div class="overall-progress">
+                                <div class="progress-text" id="progressText">Ready to convert</div>
+                                <div class="current-file-info" id="currentFileInfo"></div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics -->
+                        <div class="stats-grid d-none" id="statsGrid">
+                            <div class="stat-card">
+                                <div class="stat-icon text-primary">
+                                    <i class="fas fa-images"></i>
+                                </div>
+                                <div class="stat-number text-primary" id="totalFiles">0</div>
+                                <div class="stat-label">Total Files</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon text-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-number text-success" id="completedFiles">0</div>
+                                <div class="stat-label">Completed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon text-warning">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-number text-warning" id="remainingFiles">0</div>
+                                <div class="stat-label">Remaining</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon text-info">
+                                    <i class="fas fa-compress-alt"></i>
+                                </div>
+                                <div class="stat-number text-info" id="totalSavings">0%</div>
+                                <div class="stat-label">Space Saved</div>
+                            </div>
+                        </div>
+
+                        <!-- File List -->
+                        <div class="file-list" id="fileList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Tools Section -->
+            <div class="content-section" id="toolsSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-tools me-3"></i>Advanced Tools</h2>
+                    <p>Enhance your images before conversion</p>
+                </div>
+                
+                <div class="tools-grid">
+                    <!-- Rotate & Flip Tool -->
+                    <div class="tool-card">
+                        <div class="tool-icon">
+                            <i class="fas fa-redo"></i>
+                        </div>
+                        <h4>Rotate & Flip</h4>
+                        <p>Rotate images 90°, 180°, 270° or flip horizontally/vertically</p>
+                        <button class="tool-btn" id="rotateToolBtn" data-tool="rotate">
+                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
+                        </button>
+                        
+                        <!-- Inline Controls -->
+                        <div class="tool-controls" id="rotateControls">
+                            <div class="tool-controls-header">
+                                <i class="fas fa-redo me-2"></i>Rotation & Flip Options
+                            </div>
+                            <div class="control-group">
+                                <label>Rotate</label>
+                                <div class="control-buttons">
+                                    <button class="control-btn" data-rotate="90">
+                                        <i class="fas fa-redo"></i>
+                                        <span>90°</span>
+                                    </button>
+                                    <button class="control-btn" data-rotate="180">
+                                        <i class="fas fa-sync"></i>
+                                        <span>180°</span>
+                                    </button>
+                                    <button class="control-btn" data-rotate="270">
+                                        <i class="fas fa-undo"></i>
+                                        <span>270°</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label>Flip</label>
+                                <div class="control-buttons">
+                                    <button class="control-btn" data-flip="horizontal">
+                                        <i class="fas fa-arrows-alt-h"></i>
+                                        <span>Horizontal</span>
+                                    </button>
+                                    <button class="control-btn" data-flip="vertical">
+                                        <i class="fas fa-arrows-alt-v"></i>
+                                        <span>Vertical</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <button class="apply-tool-btn" id="applyRotateBtn">
+                                <i class="fas fa-check me-2"></i>Apply Changes
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Background Removal Tool -->
+                    <div class="tool-card">
+                        <div class="tool-icon">
+                            <i class="fas fa-eraser"></i>
+                        </div>
+                        <h4>Background Removal</h4>
+                        <p>Remove or replace image backgrounds with solid colors</p>
+                        <button class="tool-btn" id="bgRemovalToolBtn" data-tool="background">
+                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
+                        </button>
+                        
+                        <!-- Inline Controls -->
+                        <div class="tool-controls" id="bgControls">
+                            <div class="tool-controls-header">
+                                <i class="fas fa-eraser me-2"></i>Background Options
+                            </div>
+                            <div class="control-group">
+                                <label>Background Type</label>
+                                <select id="bgOption" class="form-control">
+                                    <option value="transparent">Transparent (PNG only)</option>
+                                    <option value="white">White Background</option>
+                                    <option value="black">Black Background</option>
+                                    <option value="custom">Custom Color</option>
+                                </select>
+                            </div>
+                            <div class="control-group" id="customColorGroup" style="display: none;">
+                                <label>Custom Color</label>
+                                <input type="color" id="customBgColor" value="#ffffff">
+                            </div>
+                            <button class="apply-tool-btn" id="applyBgBtn">
+                                <i class="fas fa-check me-2"></i>Apply Background
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quality Comparison Tool -->
+                    <div class="tool-card">
+                        <div class="tool-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h4>Quality Comparison</h4>
+                        <p>Compare different quality settings side-by-side</p>
+                        <button class="tool-btn" id="qualityCompareBtn" data-tool="quality">
+                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
+                        </button>
+                        
+                        <!-- Inline Controls -->
+                        <div class="tool-controls" id="qualityControls">
+                            <div class="tool-controls-header">
+                                <i class="fas fa-eye me-2"></i>Quality Comparison
+                            </div>
+                            <div class="control-group">
+                                <label>Select Quality Levels to Compare</label>
+                                <div class="control-buttons">
+                                    <button class="control-btn active" data-quality="60">
+                                        <i class="fas fa-low-vision"></i>
+                                        <span>Low (60%)</span>
+                                    </button>
+                                    <button class="control-btn active" data-quality="80">
+                                        <i class="fas fa-eye"></i>
+                                        <span>Medium (80%)</span>
+                                    </button>
+                                    <button class="control-btn active" data-quality="95">
+                                        <i class="fas fa-eye"></i>
+                                        <span>High (95%)</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <button class="apply-tool-btn" id="applyQualityBtn">
+                                <i class="fas fa-check me-2"></i>Show Comparison
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Duplicate Detector Tool -->
+                    <div class="tool-card">
+                        <div class="tool-icon">
+                            <i class="fas fa-copy"></i>
+                        </div>
+                        <h4>Duplicate Detector</h4>
+                        <p>Find and remove duplicate or similar images</p>
+                        <button class="tool-btn" id="duplicateDetectorBtn" data-tool="duplicate">
+                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
+                        </button>
+                        
+                        <!-- Inline Controls -->
+                        <div class="tool-controls" id="duplicateControls">
+                            <div class="tool-controls-header">
+                                <i class="fas fa-copy me-2"></i>Duplicate Detection
+                            </div>
+                            <div id="duplicateResults">
+                                <p class="text-center">Upload images first, then click scan to check for duplicates</p>
+                            </div>
+                            <button class="apply-tool-btn" id="scanDuplicatesBtn">
+                                <i class="fas fa-search me-2"></i>Scan for Duplicates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="content-section" id="historySection">
+                <div class="section-header">
+                    <h2><i class="fas fa-history me-3"></i>Conversion History</h2>
+                    <button class="btn-custom btn-secondary" id="clearHistoryBtn">
+                        <i class="fas fa-trash me-2"></i>Clear History
+                    </button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <p class="text-center text-muted">No conversion history yet. Start converting images!</p>
+                </div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div class="content-section" id="statsSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-bar me-3"></i>Statistics</h2>
+                </div>
+                <div class="stats-dashboard">
+                    <div class="dashboard-card">
+                        <h4>Total Conversions</h4>
+                        <div class="dashboard-number" id="statTotalConversions">0</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h4>Total Space Saved</h4>
+                        <div class="dashboard-number" id="statTotalSaved">0 MB</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h4>Average Savings</h4>
+                        <div class="dashboard-number" id="statAvgSavings">0%</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h4>Total Files Processed</h4>
+                        <div class="dashboard-number" id="statTotalFiles">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Preview Panel -->
+        <div class="live-preview-panel" id="livePreviewPanel">
+            <div class="preview-panel-header">
+                <h3><i class="fas fa-eye"></i> Live Preview</h3>
+                <button class="preview-toggle" id="previewToggle" title="Close Preview">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="preview-panel-content" id="previewPanelContent">
+                <div class="empty-preview">
+                    <i class="fas fa-images"></i>
+                    <p>Upload images to see live preview</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
