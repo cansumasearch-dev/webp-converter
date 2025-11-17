@@ -3,7 +3,9 @@ class ImageConverter {
         this.files = [];
         this.quality = 0.8;
         this.conversionMode = 'webp';
-        this.targetWidth = 1000;
+        this.targetWidth = 1920;
+        this.targetHeight = 1080;
+        this.maintainAspectRatio = true;
         this.isConverting = false;
         this.totalOriginalSize = 0;
         this.totalConvertedSize = 0;
@@ -11,14 +13,15 @@ class ImageConverter {
         this.preserveExif = false;
         this.history = this.loadHistory();
         this.urlList = [];
-        this.rotateAngle = 0;
-        this.flipH = false;
-        this.flipV = false;
-        this.bgRemovalOptions = { enabled: false, option: 'transparent', customColor: '#ffffff' };
+        this.presets = this.loadPresets();
+        
+        // Individual file transformations
+        this.fileTransforms = new Map();
         
         this.initializeElements();
         this.bindEvents();
         this.renderHistory();
+        this.renderPresets();
         this.updateSidebarStats();
     }
 
@@ -48,10 +51,20 @@ class ImageConverter {
         this.remainingFilesEl = document.getElementById('remainingFiles');
         this.totalSavingsEl = document.getElementById('totalSavings');
         
-        // Radio buttons
+        // Conversion mode radio buttons
         this.modeWebpOnly = document.getElementById('modeWebpOnly');
         this.modeResizeOnly = document.getElementById('modeResizeOnly');
         this.modeBoth = document.getElementById('modeBoth');
+        
+        // Quality and resize sections
+        this.qualitySection = document.getElementById('qualitySection');
+        this.resizeSection = document.getElementById('resizeSection');
+        
+        // Dimension controls
+        this.widthInput = document.getElementById('widthInput');
+        this.heightInput = document.getElementById('heightInput');
+        this.aspectRatioBtn = document.getElementById('aspectRatioBtn');
+        this.dimensionHint = document.getElementById('dimensionHint');
         
         // Rename & EXIF
         this.renameInput = document.getElementById('renamePrefix');
@@ -63,6 +76,7 @@ class ImageConverter {
         this.sortBySavingsBtn = document.getElementById('sortBySavingsBtn');
         this.removeFailedBtn = document.getElementById('removeFailedBtn');
         this.reconvertFailedBtn = document.getElementById('reconvertFailedBtn');
+        this.duplicateDetectorBtn = document.getElementById('duplicateDetectorBtn');
         
         // Sidebar elements
         this.sidebar = document.getElementById('sidebar');
@@ -95,28 +109,28 @@ class ImageConverter {
         this.livePreviewPanel = document.getElementById('livePreviewPanel');
         this.previewPanelContent = document.getElementById('previewPanelContent');
         this.previewToggle = document.getElementById('previewToggle');
+        this.reopenPreviewBtn = document.getElementById('reopenPreviewBtn');
         
-        // Tool inline controls
-        this.toolBtns = document.querySelectorAll('.tool-btn');
-        this.rotateToolBtn = document.getElementById('rotateToolBtn');
-        this.rotateControls = document.getElementById('rotateControls');
-        this.applyRotateBtn = document.getElementById('applyRotateBtn');
+        // Preset elements
+        this.savePresetBtn = document.getElementById('savePresetBtn');
+        this.presetModal = document.getElementById('presetModal');
+        this.closePresetModal = document.getElementById('closePresetModal');
+        this.presetNameInput = document.getElementById('presetNameInput');
+        this.confirmSavePreset = document.getElementById('confirmSavePreset');
+        this.presetsGrid = document.getElementById('presetsGrid');
         
-        this.bgRemovalToolBtn = document.getElementById('bgRemovalToolBtn');
-        this.bgControls = document.getElementById('bgControls');
-        this.bgOption = document.getElementById('bgOption');
-        this.customBgColor = document.getElementById('customBgColor');
-        this.customColorGroup = document.getElementById('customColorGroup');
-        this.applyBgBtn = document.getElementById('applyBgBtn');
-        
-        this.qualityCompareBtn = document.getElementById('qualityCompareBtn');
-        this.qualityControls = document.getElementById('qualityControls');
-        this.applyQualityBtn = document.getElementById('applyQualityBtn');
-        
-        this.duplicateDetectorBtn = document.getElementById('duplicateDetectorBtn');
-        this.duplicateControls = document.getElementById('duplicateControls');
-        this.scanDuplicatesBtn = document.getElementById('scanDuplicatesBtn');
+        // Duplicate modal
+        this.duplicateModal = document.getElementById('duplicateModal');
+        this.closeDuplicateModal = document.getElementById('closeDuplicateModal');
         this.duplicateResults = document.getElementById('duplicateResults');
+        
+        // Changelog elements
+        this.changelogBtns = document.querySelectorAll('.changelog-btn');
+        this.changelogViewer = document.getElementById('changelogViewer');
+        this.closeChangelog = document.getElementById('closeChangelog');
+        this.changelogTitle = document.getElementById('changelogTitle');
+        this.changelogOld = document.getElementById('changelogOld');
+        this.changelogNew = document.getElementById('changelogNew');
     }
 
     bindEvents() {
@@ -127,16 +141,27 @@ class ImageConverter {
         this.uploadZone.addEventListener('drop', this.handleDrop.bind(this));
         this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
         
-        // Control events
+        // Quality control
         this.qualitySlider.addEventListener('input', this.handleQualityChange.bind(this));
+        
+        // Conversion mode
         this.modeWebpOnly.addEventListener('change', this.handleModeChange.bind(this));
         this.modeResizeOnly.addEventListener('change', this.handleModeChange.bind(this));
         this.modeBoth.addEventListener('change', this.handleModeChange.bind(this));
         
+        // Aspect ratio toggle
+        this.aspectRatioBtn.addEventListener('click', this.toggleAspectRatio.bind(this));
+        
+        // Dimension inputs
+        this.widthInput.addEventListener('input', this.handleWidthChange.bind(this));
+        this.heightInput.addEventListener('input', this.handleHeightChange.bind(this));
+        
+        // Action buttons
         this.convertBtn.addEventListener('click', this.startConversion.bind(this));
         this.clearBtn.addEventListener('click', this.clearAll.bind(this));
         this.downloadAllBtn.addEventListener('click', this.downloadAll.bind(this));
         
+        // Rename and EXIF
         this.renameInput.addEventListener('input', this.handleRenameInput.bind(this));
         this.preserveExifToggle.addEventListener('change', this.handleExifToggle.bind(this));
         
@@ -145,6 +170,7 @@ class ImageConverter {
         this.sortBySavingsBtn.addEventListener('click', () => this.sortFiles('savings'));
         this.removeFailedBtn.addEventListener('click', this.removeFailed.bind(this));
         this.reconvertFailedBtn.addEventListener('click', this.reconvertFailed.bind(this));
+        this.duplicateDetectorBtn.addEventListener('click', this.openDuplicateDetector.bind(this));
         
         // Sidebar events
         this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
@@ -162,11 +188,7 @@ class ImageConverter {
         
         // URL upload events
         this.toggleUrlUploadBtn.addEventListener('click', () => {
-            if (this.urlUploadSection.style.display === 'none') {
-                this.urlUploadSection.style.display = 'block';
-            } else {
-                this.urlUploadSection.style.display = 'none';
-            }
+            this.urlUploadSection.classList.toggle('d-none');
         });
         
         this.urlAddBtn.addEventListener('click', this.addUrlToList.bind(this));
@@ -181,300 +203,40 @@ class ImageConverter {
         
         // Live Preview Panel events
         this.previewToggle.addEventListener('click', () => this.togglePreviewPanel());
+        this.reopenPreviewBtn.addEventListener('click', () => this.togglePreviewPanel());
         
-        // Tool inline control events
-        this.toolBtns.forEach(btn => {
+        // Preset events
+        this.savePresetBtn.addEventListener('click', () => this.openPresetModal());
+        this.closePresetModal.addEventListener('click', () => this.closeModal(this.presetModal));
+        this.confirmSavePreset.addEventListener('click', () => this.savePreset());
+        
+        // Duplicate modal
+        this.closeDuplicateModal.addEventListener('click', () => this.closeModal(this.duplicateModal));
+        
+        // Changelog events
+        this.changelogBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tool = btn.getAttribute('data-tool');
-                this.toggleToolControls(tool, btn);
+                const file = btn.getAttribute('data-file');
+                this.showChangelog(file);
             });
         });
         
-        // Rotate & Flip controls
-        document.querySelectorAll('[data-rotate]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('[data-rotate]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.rotateAngle = parseInt(btn.getAttribute('data-rotate'));
-                this.updateLivePreview();
+        if (this.closeChangelog) {
+            this.closeChangelog.addEventListener('click', () => {
+                this.changelogViewer.classList.add('d-none');
             });
-        });
+        }
         
-        document.querySelectorAll('[data-flip]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const flipType = btn.getAttribute('data-flip');
-                btn.classList.toggle('active');
-                if (flipType === 'horizontal') {
-                    this.flipH = !this.flipH;
-                } else {
-                    this.flipV = !this.flipV;
-                }
-                this.updateLivePreview();
-            });
-        });
-        
-        this.applyRotateBtn.addEventListener('click', () => {
-            this.applyToolToAll('rotate');
-        });
-        
-        // Background removal controls
-        this.bgOption.addEventListener('change', this.handleBgOptionChange.bind(this));
-        this.customBgColor.addEventListener('change', () => this.updateLivePreview());
-        this.applyBgBtn.addEventListener('click', () => {
-            this.bgRemovalOptions = {
-                enabled: true,
-                option: this.bgOption.value,
-                customColor: this.customBgColor.value
-            };
-            this.updateLivePreview();
-        });
-        
-        // Quality comparison controls
-        document.querySelectorAll('[data-quality]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                btn.classList.toggle('active');
-            });
-        });
-        
-        this.applyQualityBtn.addEventListener('click', () => {
-            this.showQualityComparison();
-        });
-        
-        // Duplicate detection
-        this.scanDuplicatesBtn.addEventListener('click', this.scanForDuplicates.bind(this));
-    }
-
-    // Toggle preview panel
-    togglePreviewPanel() {
-        this.livePreviewPanel.classList.toggle('d-none');
-    }
-    
-    // Toggle tool controls
-    toggleToolControls(tool, btn) {
-        const allTools = ['rotate', 'background', 'quality', 'duplicate'];
-        const toolControlsMap = {
-            'rotate': this.rotateControls,
-            'background': this.bgControls,
-            'quality': this.qualityControls,
-            'duplicate': this.duplicateControls
-        };
-        
-        // Toggle all tool buttons
-        this.toolBtns.forEach(b => {
-            const btnIcon = b.querySelector('i');
-            const btnText = b.querySelector('span');
-            if (b === btn) {
-                b.classList.toggle('active');
-                if (b.classList.contains('active')) {
-                    btnIcon.className = 'fas fa-chevron-up me-2';
-                    btnText.textContent = 'Close Tool';
-                } else {
-                    btnIcon.className = 'fas fa-chevron-down me-2';
-                    btnText.textContent = 'Open Tool';
-                }
-            } else {
-                b.classList.remove('active');
-                const icon = b.querySelector('i');
-                const text = b.querySelector('span');
-                if (icon && text) {
-                    icon.className = 'fas fa-chevron-down me-2';
-                    text.textContent = 'Open Tool';
-                }
+        // Close modals on background click
+        [this.duplicateModal, this.presetModal].forEach(modal => {
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        this.closeModal(modal);
+                    }
+                });
             }
         });
-        
-        // Toggle corresponding controls
-        allTools.forEach(t => {
-            if (t === tool) {
-                toolControlsMap[t].classList.toggle('active');
-            } else {
-                toolControlsMap[t].classList.remove('active');
-            }
-        });
-        
-        // Update live preview if files exist
-        if (this.files.length > 0) {
-            this.updateLivePreview();
-        }
-    }
-    
-    // Update live preview panel
-    async updateLivePreview() {
-        if (this.files.length === 0) {
-            this.previewPanelContent.innerHTML = `
-                <div class="empty-preview">
-                    <i class="fas fa-images"></i>
-                    <p>Upload images to see live preview</p>
-                </div>
-            `;
-            return;
-        }
-        
-        this.previewPanelContent.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #667eea;"></i><p>Generating previews...</p></div>';
-        
-        // Show preview panel if hidden
-        this.livePreviewPanel.classList.remove('d-none');
-        
-        // Generate previews for all files
-        const previewsHTML = await Promise.all(
-            this.files.map(async (fileObj, index) => {
-                const originalUrl = await this.fileToDataUrl(fileObj.file);
-                const processedUrl = await this.generateProcessedPreview(fileObj);
-                
-                const originalSize = this.formatFileSize(fileObj.size);
-                const processedSize = processedUrl ? 'Processing...' : originalSize;
-                
-                return `
-                    <div class="preview-item-card">
-                        <div class="preview-item-name">${fileObj.name}</div>
-                        <div class="preview-images">
-                            <div class="preview-image-wrapper">
-                                <div class="preview-label">Original</div>
-                                <img src="${originalUrl}" alt="Original" class="preview-img">
-                                <div class="preview-size">${originalSize}</div>
-                            </div>
-                            <div class="preview-image-wrapper">
-                                <div class="preview-label">Processed</div>
-                                <img src="${processedUrl || originalUrl}" alt="Processed" class="preview-img">
-                                <div class="preview-size">${processedSize}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            })
-        );
-        
-        this.previewPanelContent.innerHTML = previewsHTML.join('');
-    }
-    
-    // Generate processed preview
-    async generateProcessedPreview(fileObj) {
-        try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            const originalUrl = await this.fileToDataUrl(fileObj.file);
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-                img.src = originalUrl;
-            });
-            
-            let width = img.width;
-            let height = img.height;
-            
-            // Apply resize if needed
-            if ((this.conversionMode === 'resize' || this.conversionMode === 'both') && width > this.targetWidth) {
-                const aspectRatio = height / width;
-                width = this.targetWidth;
-                height = Math.round(this.targetWidth * aspectRatio);
-            }
-            
-            // Apply rotation/flip
-            if (this.rotateAngle === 90 || this.rotateAngle === 270) {
-                canvas.width = height;
-                canvas.height = width;
-            } else {
-                canvas.width = width;
-                canvas.height = height;
-            }
-            
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(this.rotateAngle * Math.PI / 180);
-            if (this.flipH) ctx.scale(-1, 1);
-            if (this.flipV) ctx.scale(1, -1);
-            ctx.drawImage(img, -width / 2, -height / 2, width, height);
-            ctx.restore();
-            
-            return canvas.toDataURL('image/webp', this.quality);
-        } catch (error) {
-            console.error('Preview generation error:', error);
-            return null;
-        }
-    }
-    
-    // Apply tool to all files
-    async applyToolToAll(toolType) {
-        // Tool is already applied via the state variables
-        // Just show a confirmation
-        const toolNames = {
-            'rotate': 'Rotation/Flip',
-            'background': 'Background Removal',
-            'quality': 'Quality'
-        };
-        
-        alert(`${toolNames[toolType]} settings will be applied during conversion!`);
-        this.updateLivePreview();
-    }
-    
-    // Show quality comparison
-    async showQualityComparison() {
-        if (this.files.length === 0) {
-            alert('Please upload images first');
-            return;
-        }
-        
-        const activeQualities = [];
-        document.querySelectorAll('[data-quality].active').forEach(btn => {
-            activeQualities.push(parseInt(btn.getAttribute('data-quality')));
-        });
-        
-        if (activeQualities.length === 0) {
-            alert('Please select at least one quality level');
-            return;
-        }
-        
-        this.previewPanelContent.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #667eea;"></i><p>Generating quality comparison...</p></div>';
-        
-        const fileObj = this.files[0];
-        const img = new Image();
-        const reader = new FileReader();
-        
-        reader.onload = async (e) => {
-            img.src = e.target.result;
-            await new Promise(resolve => { img.onload = resolve; });
-            
-            const comparisons = await Promise.all(
-                activeQualities.map(async quality => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = Math.min(img.width, 400);
-                    canvas.height = Math.round((canvas.width / img.width) * img.height);
-                    
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    const blob = await new Promise(resolve => {
-                        canvas.toBlob(resolve, 'image/webp', quality / 100);
-                    });
-                    
-                    return {
-                        quality: quality,
-                        url: canvas.toDataURL('image/webp', quality / 100),
-                        size: this.formatFileSize(blob.size)
-                    };
-                })
-            );
-            
-            this.previewPanelContent.innerHTML = comparisons.map(comp => `
-                <div class="preview-item-card">
-                    <div class="preview-item-name">Quality: ${comp.quality}%</div>
-                    <div class="preview-images">
-                        <div class="preview-image-wrapper" style="grid-column: 1 / -1;">
-                            <img src="${comp.url}" alt="Quality ${comp.quality}%" class="preview-img">
-                            <div class="preview-size">${comp.size}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        };
-        
-        reader.readAsDataURL(fileObj.file);
     }
 
     // Sidebar methods
@@ -502,12 +264,74 @@ class ImageConverter {
         this.sidebarSpaceSaved.textContent = this.formatFileSize(totalSaved);
     }
 
+    // Conversion mode handling
+    handleModeChange(e) {
+        this.conversionMode = e.target.value;
+        
+        const infoTexts = {
+            'webp': 'Images will be converted to WebP format only',
+            'resize': 'Images will be resized (keeps original format)',
+            'both': 'Images will be resized AND converted to WebP for maximum savings!'
+        };
+        
+        this.conversionModeInfo.textContent = infoTexts[this.conversionMode];
+        
+        // Show/hide quality and resize sections based on mode
+        if (this.conversionMode === 'webp') {
+            this.qualitySection.classList.remove('d-none');
+            this.resizeSection.classList.add('d-none');
+        } else if (this.conversionMode === 'resize') {
+            this.qualitySection.classList.add('d-none');
+            this.resizeSection.classList.remove('d-none');
+        } else if (this.conversionMode === 'both') {
+            this.qualitySection.classList.remove('d-none');
+            this.resizeSection.classList.remove('d-none');
+        }
+    }
+
+    // Aspect ratio handling
+    toggleAspectRatio() {
+        this.maintainAspectRatio = !this.maintainAspectRatio;
+        
+        if (this.maintainAspectRatio) {
+            this.aspectRatioBtn.classList.add('active');
+            this.aspectRatioBtn.innerHTML = '<i class="fas fa-link me-2"></i><span>Maintain Aspect Ratio</span>';
+            this.heightInput.disabled = true;
+            this.dimensionHint.textContent = 'Height will auto-adjust to maintain aspect ratio';
+        } else {
+            this.aspectRatioBtn.classList.remove('active');
+            this.aspectRatioBtn.innerHTML = '<i class="fas fa-unlink me-2"></i><span>Manual Dimensions</span>';
+            this.heightInput.disabled = false;
+            this.dimensionHint.textContent = 'Set custom width and height independently';
+        }
+    }
+
+    handleWidthChange(e) {
+        this.targetWidth = parseInt(e.target.value) || 1920;
+        
+        if (this.maintainAspectRatio && this.files.length > 0) {
+            // Calculate height based on first image's aspect ratio
+            const firstFile = this.files[0];
+            if (firstFile.originalDimensions) {
+                const [width, height] = firstFile.originalDimensions.split('x').map(Number);
+                const aspectRatio = height / width;
+                this.targetHeight = Math.round(this.targetWidth * aspectRatio);
+                this.heightInput.value = this.targetHeight;
+            }
+        }
+    }
+
+    handleHeightChange(e) {
+        if (!this.maintainAspectRatio) {
+            this.targetHeight = parseInt(e.target.value) || 1080;
+        }
+    }
+
     // URL upload methods
     addUrlToList() {
         const url = this.urlInput.value.trim();
         if (!url) return;
         
-        // Basic URL validation
         try {
             new URL(url);
         } catch {
@@ -519,7 +343,6 @@ class ImageConverter {
         this.renderUrlList();
         this.urlInput.value = '';
         
-        // Download image from URL
         this.downloadImageFromUrl(url);
     }
 
@@ -540,7 +363,6 @@ class ImageConverter {
             console.error('Error downloading image:', error);
             alert('Failed to download image from URL. Please check the URL and try again.');
             
-            // Remove from URL list
             this.urlList = this.urlList.filter(u => u !== url);
             this.renderUrlList();
         }
@@ -561,7 +383,6 @@ class ImageConverter {
             </div>
         `).join('');
         
-        // Bind remove buttons
         this.urlListEl.querySelectorAll('.url-remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.currentTarget.getAttribute('data-url-index'));
@@ -571,69 +392,65 @@ class ImageConverter {
         });
     }
 
-    handleBgOptionChange(e) {
-        if (e.target.value === 'custom') {
-            this.customColorGroup.style.display = 'block';
+    // Preview panel methods
+    togglePreviewPanel() {
+        if (this.livePreviewPanel.classList.contains('d-none')) {
+            this.livePreviewPanel.classList.remove('d-none');
+            this.reopenPreviewBtn.classList.add('d-none');
         } else {
-            this.customColorGroup.style.display = 'none';
+            this.livePreviewPanel.classList.add('d-none');
+            this.reopenPreviewBtn.classList.remove('d-none');
         }
     }
 
-    async scanForDuplicates() {
-        if (this.files.length < 2) {
-            this.duplicateResults.innerHTML = '<p class="text-center">You need at least 2 images to detect duplicates</p>';
+    async updateLivePreview() {
+        if (this.files.length === 0) {
+            this.previewPanelContent.innerHTML = `
+                <div class="empty-preview">
+                    <i class="fas fa-images"></i>
+                    <p>Upload images to see live preview</p>
+                </div>
+            `;
             return;
         }
         
-        this.duplicateResults.innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Scanning for duplicates...</p>';
+        this.previewPanelContent.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #667eea;"></i><p>Generating previews...</p></div>';
         
-        // Simple duplicate detection based on file size and name
-        const duplicates = [];
-        const seen = new Map();
+        this.livePreviewPanel.classList.remove('d-none');
+        this.reopenPreviewBtn.classList.add('d-none');
         
-        for (const file of this.files) {
-            const key = `${file.name}-${file.size}`;
-            if (seen.has(key)) {
-                duplicates.push({
-                    file1: seen.get(key),
-                    file2: file
-                });
-            } else {
-                seen.set(key, file);
-            }
-        }
+        const previewsHTML = await Promise.all(
+            this.files.slice(0, 10).map(async (fileObj) => {
+                const originalUrl = await this.fileToDataUrl(fileObj.file);
+                
+                return `
+                    <div class="preview-item-card">
+                        <div class="preview-item-name">${fileObj.name}</div>
+                        <div class="preview-images">
+                            <div class="preview-image-wrapper">
+                                <div class="preview-label">Original</div>
+                                <img src="${originalUrl}" alt="Original" class="preview-img">
+                                <div class="preview-size">${this.formatFileSize(fileObj.size)}</div>
+                            </div>
+                            <div class="preview-image-wrapper">
+                                <div class="preview-label">Preview</div>
+                                <img src="${originalUrl}" alt="Preview" class="preview-img">
+                                <div class="preview-size">Processing...</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            })
+        );
         
-        if (duplicates.length === 0) {
-            this.duplicateResults.innerHTML = '<p class="text-center text-success"><i class="fas fa-check-circle me-2"></i>No duplicates found!</p>';
-        } else {
-            this.duplicateResults.innerHTML = `
-                <p class="text-center text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Found ${duplicates.length} duplicate(s)</p>
-                <div class="text-center mt-3">
-                    <button class="btn-custom" onclick="converter.removeDuplicates()" style="display: inline-block; padding: 0.8rem 1.5rem;">
-                        <i class="fas fa-trash me-2"></i>Remove Duplicates
-                    </button>
-                </div>
-            `;
+        this.previewPanelContent.innerHTML = previewsHTML.join('');
+        
+        if (this.files.length > 10) {
+            this.previewPanelContent.innerHTML += '<p class="text-center text-muted mt-3">Showing first 10 images</p>';
         }
     }
 
-    removeDuplicates() {
-        const seen = new Set();
-        this.files = this.files.filter(file => {
-            const key = `${file.name}-${file.size}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-        
-        this.updateUI();
-        this.updateLivePreview();
-        alert('Duplicates removed!');
-        this.scanForDuplicates(); // Refresh the duplicate detection results
-    }
-
+    // File handling
     handleDragOver(e) {
         e.preventDefault();
         this.uploadZone.classList.add('dragover');
@@ -675,29 +492,25 @@ class ImageConverter {
                 };
                 this.files.push(fileObj);
                 this.totalOriginalSize += file.size;
+                
+                // Initialize transform data for this file
+                this.fileTransforms.set(fileObj.id, {
+                    rotate: 0,
+                    flipH: false,
+                    flipV: false,
+                    background: null
+                });
             }
         });
         
         this.updateUI();
         this.updateRenamePreview();
-        this.updateLivePreview(); // Trigger live preview update
+        this.updateLivePreview();
     }
 
     handleQualityChange(e) {
         this.quality = e.target.value / 100;
         this.qualityValue.textContent = e.target.value + '%';
-    }
-
-    handleModeChange(e) {
-        this.conversionMode = e.target.value;
-        
-        const infoTexts = {
-            'webp': 'Images will be converted to WebP format only',
-            'resize': 'Images will be resized to 1000px width (keeps original format)',
-            'both': 'Images will be resized AND converted to WebP for maximum savings!'
-        };
-        
-        this.conversionModeInfo.textContent = infoTexts[this.conversionMode];
     }
 
     handleRenameInput(e) {
@@ -737,6 +550,9 @@ class ImageConverter {
             this.showElement(this.progressSection);
             this.showElement(this.statsGrid);
             this.showElement(this.bulkActions);
+            
+            // Trigger mode change to show correct sections
+            this.handleModeChange({ target: { value: this.conversionMode } });
         } else {
             this.hideElement(this.qualityControl);
             this.hideElement(this.actionButtons);
@@ -765,17 +581,38 @@ class ImageConverter {
                 ? `<span class="savings-badge">-${fileObj.savings}%</span>` 
                 : '';
             
+            const transforms = this.fileTransforms.get(fileObj.id) || {};
+            
+            const toolButtons = `
+                <button class="tool-btn" data-file-id="${fileObj.id}" data-tool="rotate" title="Rotate">
+                    <i class="fas fa-redo"></i>
+                </button>
+                <button class="tool-btn ${transforms.flipH ? 'active' : ''}" data-file-id="${fileObj.id}" data-tool="flipH" title="Flip Horizontal">
+                    <i class="fas fa-arrows-alt-h"></i>
+                </button>
+                <button class="tool-btn ${transforms.flipV ? 'active' : ''}" data-file-id="${fileObj.id}" data-tool="flipV" title="Flip Vertical">
+                    <i class="fas fa-arrows-alt-v"></i>
+                </button>
+                <button class="tool-btn" data-file-id="${fileObj.id}" data-tool="background" title="Background">
+                    <i class="fas fa-fill-drip"></i>
+                </button>
+            `;
+            
             const downloadBtn = fileObj.status === 'completed' 
-                ? `<button class="download-btn" data-file-id="${fileObj.id}">
-                     <i class="fas fa-download me-1"></i>Download
+                ? `<button class="download-btn" data-file-id="${fileObj.id}" title="Download">
+                     <i class="fas fa-download"></i>
                    </button>` 
                 : '';
             
             const previewBtn = fileObj.status === 'completed' 
-                ? `<button class="preview-btn" data-file-id="${fileObj.id}">
-                     <i class="fas fa-eye me-1"></i>Preview
+                ? `<button class="preview-btn" data-file-id="${fileObj.id}" title="Preview">
+                     <i class="fas fa-eye"></i>
                    </button>` 
                 : '';
+            
+            const removeBtn = `<button class="remove-btn" data-file-id="${fileObj.id}" title="Remove">
+                <i class="fas fa-times"></i>
+            </button>`;
             
             const finalName = this.getFinalFileName(fileObj, index);
             
@@ -787,36 +624,92 @@ class ImageConverter {
                     <div class="file-actions">
                         ${savingsText}
                         <i class="${statusIcon}"></i>
+                        ${fileObj.status === 'pending' ? toolButtons : ''}
                         ${previewBtn}
                         ${downloadBtn}
+                        ${removeBtn}
                     </div>
                 </div>
                 <div class="file-details">
                     ${this.formatFileSize(fileObj.size)}
                     ${fileObj.convertedSize > 0 ? ` → ${this.formatFileSize(fileObj.convertedSize)}` : ''}
-                    ${fileObj.originalDimensions && fileObj.newDimensions && fileObj.originalDimensions !== fileObj.newDimensions ? 
-                        ` • ${fileObj.originalDimensions} → ${fileObj.newDimensions}` : 
-                        fileObj.originalDimensions ? ` • ${fileObj.originalDimensions}` : ''}
+                    ${fileObj.originalDimensions ? ` • ${fileObj.originalDimensions}` : ''}
+                    ${transforms.rotate ? ` • Rotated ${transforms.rotate}°` : ''}
+                    ${transforms.flipH ? ` • Flipped H` : ''}
+                    ${transforms.flipV ? ` • Flipped V` : ''}
                 </div>
             `;
             
             this.fileList.appendChild(fileItem);
         });
         
-        // Bind button events
+        // Bind all button events
+        this.fileList.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const fileId = parseFloat(e.currentTarget.getAttribute('data-file-id'));
+                const tool = e.currentTarget.getAttribute('data-tool');
+                this.applyIndividualTool(fileId, tool);
+            });
+        });
+        
         this.fileList.querySelectorAll('.download-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const fileId = e.currentTarget.getAttribute('data-file-id');
+                const fileId = parseFloat(e.currentTarget.getAttribute('data-file-id'));
                 this.downloadFile(fileId);
             });
         });
         
         this.fileList.querySelectorAll('.preview-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const fileId = e.currentTarget.getAttribute('data-file-id');
+                const fileId = parseFloat(e.currentTarget.getAttribute('data-file-id'));
                 this.showPreview(fileId);
             });
         });
+        
+        this.fileList.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const fileId = parseFloat(e.currentTarget.getAttribute('data-file-id'));
+                this.removeFile(fileId);
+            });
+        });
+    }
+
+    applyIndividualTool(fileId, tool) {
+        const transforms = this.fileTransforms.get(fileId);
+        if (!transforms) return;
+        
+        switch(tool) {
+            case 'rotate':
+                transforms.rotate = (transforms.rotate + 90) % 360;
+                break;
+            case 'flipH':
+                transforms.flipH = !transforms.flipH;
+                break;
+            case 'flipV':
+                transforms.flipV = !transforms.flipV;
+                break;
+            case 'background':
+                // Simple toggle between white and transparent
+                transforms.background = transforms.background === 'white' ? null : 'white';
+                break;
+        }
+        
+        this.renderFileList();
+        this.updateLivePreview();
+    }
+
+    removeFile(fileId) {
+        const index = this.files.findIndex(f => f.id === fileId);
+        if (index > -1) {
+            this.totalOriginalSize -= this.files[index].size;
+            if (this.files[index].convertedSize) {
+                this.totalConvertedSize -= this.files[index].convertedSize;
+            }
+            this.files.splice(index, 1);
+            this.fileTransforms.delete(fileId);
+            this.updateUI();
+            this.updateLivePreview();
+        }
     }
 
     getFinalFileName(fileObj, index) {
@@ -907,7 +800,6 @@ class ImageConverter {
         this.convertBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Start Conversion';
         this.updateStats();
         
-        // Save to history
         this.saveToHistory();
     }
 
@@ -920,7 +812,6 @@ class ImageConverter {
             const ctx = canvas.getContext('2d');
             const img = new Image();
             
-            // Store original as data URL for preview
             const originalDataUrl = await this.fileToDataUrl(fileObj.file);
             fileObj.originalDataUrl = originalDataUrl;
             
@@ -930,33 +821,50 @@ class ImageConverter {
                 img.src = originalDataUrl;
             });
             
+            // Store original dimensions
+            fileObj.originalDimensions = `${img.width}x${img.height}`;
+            
             let canvasWidth = img.width;
             let canvasHeight = img.height;
             const shouldResize = this.conversionMode === 'resize' || this.conversionMode === 'both';
             
-            if (shouldResize && img.width > this.targetWidth) {
-                const aspectRatio = img.height / img.width;
-                canvasWidth = this.targetWidth;
-                canvasHeight = Math.round(this.targetWidth * aspectRatio);
+            if (shouldResize) {
+                if (this.maintainAspectRatio) {
+                    if (img.width > this.targetWidth) {
+                        const aspectRatio = img.height / img.width;
+                        canvasWidth = this.targetWidth;
+                        canvasHeight = Math.round(this.targetWidth * aspectRatio);
+                    }
+                } else {
+                    canvasWidth = this.targetWidth;
+                    canvasHeight = this.targetHeight;
+                }
             }
             
-            // Apply rotation/flip
-            if (this.rotateAngle !== 0 || this.flipH || this.flipV) {
-                canvas.width = this.rotateAngle === 90 || this.rotateAngle === 270 ? canvasHeight : canvasWidth;
-                canvas.height = this.rotateAngle === 90 || this.rotateAngle === 270 ? canvasWidth : canvasHeight;
-                
-                ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.rotate(this.rotateAngle * Math.PI / 180);
-                if (this.flipH) ctx.scale(-1, 1);
-                if (this.flipV) ctx.scale(1, -1);
-                ctx.drawImage(img, -canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
-                ctx.restore();
+            // Apply individual transformations
+            const transforms = this.fileTransforms.get(fileObj.id) || {};
+            
+            if (transforms.rotate === 90 || transforms.rotate === 270) {
+                canvas.width = canvasHeight;
+                canvas.height = canvasWidth;
             } else {
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
-                ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
             }
+            
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(transforms.rotate * Math.PI / 180);
+            if (transforms.flipH) ctx.scale(-1, 1);
+            if (transforms.flipV) ctx.scale(1, -1);
+            
+            if (transforms.background === 'white') {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
+            }
+            
+            ctx.drawImage(img, -canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
+            ctx.restore();
             
             const shouldConvertToWebP = this.conversionMode === 'webp' || this.conversionMode === 'both';
             const mimeType = shouldConvertToWebP ? 'image/webp' : fileObj.file.type;
@@ -969,11 +877,9 @@ class ImageConverter {
                     this.totalConvertedSize += blob.size;
                     fileObj.savings = Math.round(((fileObj.size - blob.size) / fileObj.size) * 100);
                     fileObj.status = 'completed';
-                    fileObj.originalDimensions = `${img.width}x${img.height}`;
-                    fileObj.newDimensions = `${canvasWidth}x${canvasHeight}`;
+                    fileObj.newDimensions = `${canvas.width}x${canvas.height}`;
                     fileObj.convertedToWebP = shouldConvertToWebP;
                     
-                    // Store converted as data URL for preview
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         fileObj.convertedDataUrl = e.target.result;
@@ -1002,35 +908,35 @@ class ImageConverter {
     }
 
     showPreview(fileId) {
-        const fileObj = this.files.find(f => f.id == fileId);
+        const fileObj = this.files.find(f => f.id === fileId);
         if (!fileObj || !fileObj.convertedDataUrl) return;
         
-        // Create modal
         const modal = document.createElement('div');
-        modal.className = 'preview-modal active';
+        modal.className = 'duplicate-modal';
+        modal.style.display = 'flex';
         modal.innerHTML = `
-            <div class="preview-content">
-                <button class="close-preview">&times;</button>
-                <div class="preview-header">
+            <div class="duplicate-modal-content">
+                <button class="close-modal">&times;</button>
+                <div class="modal-header">
                     <h3>Before & After Comparison</h3>
                     <p>${fileObj.name}</p>
                 </div>
-                <div class="preview-comparison">
-                    <div class="preview-item">
-                        <div class="preview-label">Original</div>
-                        <img src="${fileObj.originalDataUrl}" alt="Original" class="preview-image">
-                        <div class="preview-stats">
-                            <div class="stat-line">Size: ${this.formatFileSize(fileObj.size)}</div>
-                            <div class="stat-line">Dimensions: ${fileObj.originalDimensions}</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                    <div style="text-align: center;">
+                        <div style="font-weight: 600; margin-bottom: 1rem;">Original</div>
+                        <img src="${fileObj.originalDataUrl}" alt="Original" style="width: 100%; border-radius: 10px; margin-bottom: 1rem;">
+                        <div style="color: #666;">
+                            <div>Size: ${this.formatFileSize(fileObj.size)}</div>
+                            <div>Dimensions: ${fileObj.originalDimensions}</div>
                         </div>
                     </div>
-                    <div class="preview-item">
-                        <div class="preview-label">Converted</div>
-                        <img src="${fileObj.convertedDataUrl}" alt="Converted" class="preview-image">
-                        <div class="preview-stats">
-                            <div class="stat-line">Size: ${this.formatFileSize(fileObj.convertedSize)}</div>
-                            <div class="stat-line">Dimensions: ${fileObj.newDimensions}</div>
-                            <div class="stat-line" style="color: #28a745; font-weight: 600;">Saved: ${fileObj.savings}%</div>
+                    <div style="text-align: center;">
+                        <div style="font-weight: 600; margin-bottom: 1rem;">Converted</div>
+                        <img src="${fileObj.convertedDataUrl}" alt="Converted" style="width: 100%; border-radius: 10px; margin-bottom: 1rem;">
+                        <div style="color: #666;">
+                            <div>Size: ${this.formatFileSize(fileObj.convertedSize)}</div>
+                            <div>Dimensions: ${fileObj.newDimensions}</div>
+                            <div style="color: #28a745; font-weight: 600;">Saved: ${fileObj.savings}%</div>
                         </div>
                     </div>
                 </div>
@@ -1039,12 +945,10 @@ class ImageConverter {
         
         document.body.appendChild(modal);
         
-        // Close button
-        modal.querySelector('.close-preview').addEventListener('click', () => {
+        modal.querySelector('.close-modal').addEventListener('click', () => {
             modal.remove();
         });
         
-        // Close on background click
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.remove();
@@ -1053,7 +957,7 @@ class ImageConverter {
     }
 
     downloadFile(fileId) {
-        const fileObj = this.files.find(f => f.id == fileId);
+        const fileObj = this.files.find(f => f.id === fileId);
         if (!fileObj || !fileObj.convertedBlob) return;
         
         const index = this.files.indexOf(fileObj);
@@ -1079,7 +983,7 @@ class ImageConverter {
             const zip = new JSZip();
             
             completedFiles.forEach((fileObj, index) => {
-                const fileName = this.getFinalFileName(fileObj, index);
+                const fileName = this.getFinalFileName(fileObj, this.files.indexOf(fileObj));
                 zip.file(fileName, fileObj.convertedBlob);
             });
             
@@ -1137,6 +1041,432 @@ class ImageConverter {
         }
     }
 
+    // Duplicate detector
+    openDuplicateDetector() {
+        this.duplicateModal.classList.remove('d-none');
+        this.scanForDuplicates();
+    }
+
+    async scanForDuplicates() {
+        if (this.files.length < 2) {
+            this.duplicateResults.innerHTML = '<p class="text-center">You need at least 2 images to detect duplicates</p>';
+            return;
+        }
+        
+        this.duplicateResults.innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Scanning for duplicates...</p>';
+        
+        const duplicates = [];
+        const seen = new Map();
+        
+        for (const file of this.files) {
+            const key = `${file.name}-${file.size}`;
+            if (seen.has(key)) {
+                duplicates.push({
+                    file1: seen.get(key),
+                    file2: file
+                });
+            } else {
+                seen.set(key, file);
+            }
+        }
+        
+        if (duplicates.length === 0) {
+            this.duplicateResults.innerHTML = '<p class="text-center text-success"><i class="fas fa-check-circle me-2"></i>No duplicates found!</p>';
+        } else {
+            this.duplicateResults.innerHTML = `
+                <p class="text-center" style="color: #ffc107;"><i class="fas fa-exclamation-triangle me-2"></i>Found ${duplicates.length} duplicate(s)</p>
+                <div class="text-center mt-3">
+                    <button class="btn-custom" onclick="converter.removeDuplicates()" style="display: inline-block; padding: 0.8rem 1.5rem;">
+                        <i class="fas fa-trash me-2"></i>Remove Duplicates
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    removeDuplicates() {
+        const seen = new Set();
+        const originalLength = this.files.length;
+        
+        this.files = this.files.filter(file => {
+            const key = `${file.name}-${file.size}`;
+            if (seen.has(key)) {
+                this.fileTransforms.delete(file.id);
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
+        
+        const removed = originalLength - this.files.length;
+        this.updateUI();
+        this.updateLivePreview();
+        this.closeModal(this.duplicateModal);
+        alert(`Removed ${removed} duplicate(s)!`);
+    }
+
+    // Preset system
+    openPresetModal() {
+        this.presetModal.classList.remove('d-none');
+        this.presetNameInput.value = '';
+        this.presetNameInput.focus();
+    }
+
+    savePreset() {
+        const name = this.presetNameInput.value.trim();
+        if (!name) {
+            alert('Please enter a preset name');
+            return;
+        }
+        
+        const preset = {
+            id: Date.now(),
+            name: name,
+            conversionMode: this.conversionMode,
+            quality: this.quality,
+            targetWidth: this.targetWidth,
+            targetHeight: this.targetHeight,
+            maintainAspectRatio: this.maintainAspectRatio,
+            renamePrefix: this.renamePrefix,
+            preserveExif: this.preserveExif
+        };
+        
+        this.presets.push(preset);
+        localStorage.setItem('converterPresets', JSON.stringify(this.presets));
+        
+        this.closeModal(this.presetModal);
+        this.renderPresets();
+        alert('Preset saved successfully!');
+    }
+
+    loadPresets() {
+        const stored = localStorage.getItem('converterPresets');
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    renderPresets() {
+        if (this.presets.length === 0) {
+            this.presetsGrid.innerHTML = '<p class="text-center text-muted">No saved presets yet. Save your current settings from the converter page!</p>';
+            return;
+        }
+        
+        this.presetsGrid.innerHTML = this.presets.map(preset => `
+            <div class="preset-card">
+                <div class="preset-name">${preset.name}</div>
+                <div class="preset-settings">
+                    <div class="setting-item">
+                        <span class="setting-label">Mode:</span>
+                        <span class="setting-value">${preset.conversionMode}</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Quality:</span>
+                        <span class="setting-value">${Math.round(preset.quality * 100)}%</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Dimensions:</span>
+                        <span class="setting-value">${preset.targetWidth}x${preset.targetHeight}</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Aspect Ratio:</span>
+                        <span class="setting-value">${preset.maintainAspectRatio ? 'Locked' : 'Unlocked'}</span>
+                    </div>
+                </div>
+                <div class="preset-actions">
+                    <button class="preset-btn" onclick="converter.applyPreset(${preset.id})">
+                        <i class="fas fa-check me-2"></i>Load
+                    </button>
+                    <button class="preset-btn delete" onclick="converter.deletePreset(${preset.id})">
+                        <i class="fas fa-trash me-2"></i>Delete
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    applyPreset(presetId) {
+        const preset = this.presets.find(p => p.id === presetId);
+        if (!preset) return;
+        
+        this.conversionMode = preset.conversionMode;
+        this.quality = preset.quality;
+        this.targetWidth = preset.targetWidth;
+        this.targetHeight = preset.targetHeight;
+        this.maintainAspectRatio = preset.maintainAspectRatio;
+        this.renamePrefix = preset.renamePrefix;
+        this.preserveExif = preset.preserveExif;
+        
+        // Update UI elements
+        document.getElementById(`mode${preset.conversionMode.charAt(0).toUpperCase() + preset.conversionMode.slice(1)}`).checked = true;
+        this.qualitySlider.value = Math.round(preset.quality * 100);
+        this.qualityValue.textContent = Math.round(preset.quality * 100) + '%';
+        this.widthInput.value = preset.targetWidth;
+        this.heightInput.value = preset.targetHeight;
+        this.renameInput.value = preset.renamePrefix;
+        this.preserveExifToggle.checked = preset.preserveExif;
+        
+        if (this.maintainAspectRatio) {
+            this.aspectRatioBtn.classList.add('active');
+            this.heightInput.disabled = true;
+        } else {
+            this.aspectRatioBtn.classList.remove('active');
+            this.heightInput.disabled = false;
+        }
+        
+        this.handleModeChange({ target: { value: preset.conversionMode } });
+        this.updateRenamePreview();
+        
+        this.switchSection('converter');
+        alert(`Preset "${preset.name}" loaded!`);
+    }
+
+    deletePreset(presetId) {
+        if (!confirm('Are you sure you want to delete this preset?')) return;
+        
+        this.presets = this.presets.filter(p => p.id !== presetId);
+        localStorage.setItem('converterPresets', JSON.stringify(this.presets));
+        this.renderPresets();
+    }
+
+    // Changelog
+    showChangelog(file) {
+        this.changelogViewer.classList.remove('d-none');
+        
+        const titles = {
+            'html': 'HTML Changes',
+            'scss': 'SCSS Changes',
+            'js': 'JavaScript Changes'
+        };
+        
+        this.changelogTitle.textContent = titles[file] || 'Changes';
+        
+        const changes = {
+            'html': {
+                old: `<!-- Old HTML structure -->
+<div class="quality-control">
+    <div class="quality-slider"></div>
+</div>`,
+                new: `<!-- New HTML with mode-based sections -->
+<div class="quality-control">
+    <div class="conversion-mode-selector">
+        <!-- Mode selection -->
+    </div>
+    <div class="quality-section" id="qualitySection">
+        <!-- WebP quality slider -->
+    </div>
+    <div class="resize-section d-none" id="resizeSection">
+        <!-- Width/height controls -->
+        <button class="aspect-btn" id="aspectRatioBtn">
+            Maintain Aspect Ratio
+        </button>
+        <input type="number" id="widthInput">
+        <input type="number" id="heightInput">
+    </div>
+</div>
+
+<!-- New: Reopen Preview Button -->
+<button class="reopen-preview-btn" id="reopenPreviewBtn">
+    Open Live Preview
+</button>
+
+<!-- New: Presets Page -->
+<div class="content-section" id="presetsSection">
+    <div class="presets-grid"></div>
+</div>
+
+<!-- New: Individual Tool Buttons on Each Image -->
+<div class="file-actions">
+    <button class="tool-btn" data-tool="rotate">
+    <button class="tool-btn" data-tool="flipH">
+    <button class="tool-btn" data-tool="flipV">
+    <button class="remove-btn">×</button>
+</div>`
+            },
+            'scss': {
+                old: `// Old styling - single quality section
+.quality-control {
+    .quality-slider {
+        width: 100%;
+    }
+}`,
+                new: `// New styling - dynamic sections
+.quality-section {
+    // Only shown in WebP/Both modes
+}
+
+.resize-section {
+    // Only shown in Resize/Both modes
+    
+    .aspect-ratio-toggle {
+        .aspect-btn {
+            &.active {
+                background: $primary-gradient;
+                i { transform: rotate(0deg); }
+            }
+            &:not(.active) {
+                i { transform: rotate(45deg); }
+            }
+        }
+    }
+    
+    .dimension-inputs {
+        grid-template-columns: 1fr 1fr;
+        .dimension-input:disabled {
+            opacity: 0.6;
+        }
+    }
+}
+
+// New: Reopen preview button styling
+.reopen-preview-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: $primary-gradient;
+    z-index: 1000;
+}
+
+// New: Individual tool buttons
+.file-item {
+    .tool-btn {
+        width: 36px;
+        height: 36px;
+        &.active {
+            background: $primary-gradient;
+            color: white;
+        }
+    }
+    .remove-btn {
+        &:hover {
+            border-color: $danger-color;
+            color: $danger-color;
+        }
+    }
+}
+
+// New: Preset cards
+.preset-card {
+    @include glassmorphism;
+    .preset-settings {
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+        }
+    }
+}`
+            },
+            'js': {
+                old: `// Old JS - single mode
+this.quality = 0.8;
+this.targetWidth = 1000;
+
+convertFile(fileObj) {
+    // Simple conversion
+    if (img.width > this.targetWidth) {
+        // resize
+    }
+}`,
+                new: `// New JS - multiple modes with aspect ratio
+this.conversionMode = 'webp';
+this.maintainAspectRatio = true;
+this.targetWidth = 1920;
+this.targetHeight = 1080;
+this.fileTransforms = new Map();
+
+handleModeChange(e) {
+    this.conversionMode = e.target.value;
+    
+    if (this.conversionMode === 'webp') {
+        this.qualitySection.classList.remove('d-none');
+        this.resizeSection.classList.add('d-none');
+    } else if (this.conversionMode === 'resize') {
+        this.qualitySection.classList.add('d-none');
+        this.resizeSection.classList.remove('d-none');
+    } else {
+        // Show both
+        this.qualitySection.classList.remove('d-none');
+        this.resizeSection.classList.remove('d-none');
+    }
+}
+
+toggleAspectRatio() {
+    this.maintainAspectRatio = !this.maintainAspectRatio;
+    
+    if (this.maintainAspectRatio) {
+        this.heightInput.disabled = true;
+        // Auto-calculate height
+    } else {
+        this.heightInput.disabled = false;
+        // Manual dimensions
+    }
+}
+
+handleWidthChange(e) {
+    this.targetWidth = parseInt(e.target.value);
+    if (this.maintainAspectRatio) {
+        // Calculate height based on aspect ratio
+        const aspectRatio = height / width;
+        this.targetHeight = Math.round(this.targetWidth * aspectRatio);
+        this.heightInput.value = this.targetHeight;
+    }
+}
+
+// Individual file transformations
+applyIndividualTool(fileId, tool) {
+    const transforms = this.fileTransforms.get(fileId);
+    
+    switch(tool) {
+        case 'rotate':
+            transforms.rotate = (transforms.rotate + 90) % 360;
+            break;
+        case 'flipH':
+            transforms.flipH = !transforms.flipH;
+            break;
+        case 'flipV':
+            transforms.flipV = !transforms.flipV;
+            break;
+    }
+}
+
+// Preset system
+savePreset() {
+    const preset = {
+        name, conversionMode, quality,
+        targetWidth, targetHeight,
+        maintainAspectRatio,
+        renamePrefix, preserveExif
+    };
+    this.presets.push(preset);
+    localStorage.setItem('converterPresets', JSON.stringify(this.presets));
+}
+
+applyPreset(presetId) {
+    const preset = this.presets.find(p => p.id === presetId);
+    // Apply all settings
+    this.conversionMode = preset.conversionMode;
+    this.quality = preset.quality;
+    this.targetWidth = preset.targetWidth;
+    this.targetHeight = preset.targetHeight;
+    this.maintainAspectRatio = preset.maintainAspectRatio;
+}
+
+// Reopen preview functionality
+togglePreviewPanel() {
+    if (this.livePreviewPanel.classList.contains('d-none')) {
+        this.livePreviewPanel.classList.remove('d-none');
+        this.reopenPreviewBtn.classList.add('d-none');
+    } else {
+        this.livePreviewPanel.classList.add('d-none');
+        this.reopenPreviewBtn.classList.remove('d-none');
+    }
+}`
+            }
+        };
+        
+        this.changelogOld.textContent = changes[file].old;
+        this.changelogNew.textContent = changes[file].new;
+    }
+
+    // History methods
     saveToHistory() {
         const historyItem = {
             date: new Date().toISOString(),
@@ -1206,28 +1536,24 @@ class ImageConverter {
         this.totalConvertedSize = 0;
         this.renamePrefix = '';
         this.renameInput.value = '';
-        this.rotateAngle = 0;
-        this.flipH = false;
-        this.flipV = false;
-        this.bgRemovalOptions = { enabled: false, option: 'transparent', customColor: '#ffffff' };
         this.urlList = [];
+        this.fileTransforms.clear();
         this.renderUrlList();
         this.hideElement(this.downloadAllBtn);
         this.fileInput.value = '';
         this.updateUI();
         this.updateRenamePreview();
-        this.updateLivePreview(); // Reset live preview
-        
-        // Reset tool controls
-        document.querySelectorAll('[data-rotate], [data-flip], [data-quality]').forEach(btn => {
-            btn.classList.remove('active');
-        });
+        this.updateLivePreview();
         
         this.fileList.style.opacity = '0';
         setTimeout(() => {
             this.fileList.innerHTML = '';
             this.fileList.style.opacity = '1';
         }, 200);
+    }
+
+    closeModal(modal) {
+        modal.classList.add('d-none');
     }
 
     formatFileSize(bytes) {

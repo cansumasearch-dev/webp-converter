@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Converter Pro</title>
+    <title>WebP Converter Pro v2.0</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -30,10 +30,6 @@
                 <i class="fas fa-magic"></i>
                 <span>Converter</span>
             </a>
-            <a href="#" class="nav-item" data-section="tools">
-                <i class="fas fa-tools"></i>
-                <span>Advanced Tools</span>
-            </a>
             <a href="#" class="nav-item" data-section="history">
                 <i class="fas fa-history"></i>
                 <span>History</span>
@@ -41,6 +37,14 @@
             <a href="#" class="nav-item" data-section="stats">
                 <i class="fas fa-chart-bar"></i>
                 <span>Statistics</span>
+            </a>
+            <a href="#" class="nav-item" data-section="presets">
+                <i class="fas fa-save"></i>
+                <span>Saved Presets</span>
+            </a>
+            <a href="#" class="nav-item" data-section="changelog">
+                <i class="fas fa-code-branch"></i>
+                <span>Changelog</span>
             </a>
         </nav>
 
@@ -64,7 +68,7 @@
 
         <!-- Footer -->
         <div class="sidebar-footer">
-            <small>WebP Converter Pro v1.0</small>
+            <small>WebP Converter Pro v2.0</small>
         </div>
     </div>
 
@@ -80,7 +84,7 @@
                 <div class="main-container">
                     <header class="hero-header">
                         <div class="hero-content">
-                            <h1><i class="fas fa-magic me-3"></i>Image to WebP Converter Test</h1>
+                            <h1><i class="fas fa-magic me-3"></i>Image to WebP Converter</h1>
                             <p class="subtitle">Convert your images to WebP format and save up to 90% space!</p>
                             <div class="supported-formats">
                                 <span class="format-badge">JPG → WebP</span>
@@ -100,12 +104,12 @@
                         </div>
 
                         <!-- URL Upload Section -->
-                        <div class="url-upload-section mt-4" id="urlUploadSection" style="display: none;">
+                        <div class="url-upload-section mt-4 d-none" id="urlUploadSection">
                             <div class="url-upload-header">
                                 <i class="fas fa-link me-2"></i>Upload from URL
                             </div>
                             <div class="url-input-group">
-                                <input type="text" id="urlInput" class="url-input" placeholder="Paste image URL here (e.g., https://example.com/image.jpg)">
+                                <input type="text" id="urlInput" class="url-input" placeholder="Paste image URL here">
                                 <button class="url-add-btn" id="urlAddBtn">
                                     <i class="fas fa-plus me-1"></i>Add URL
                                 </button>
@@ -122,17 +126,8 @@
 
                         <!-- Quality Control -->
                         <div class="quality-control d-none" id="qualityControl">
-                            <div class="quality-header">
-                                <h4><i class="fas fa-sliders-h me-2"></i>WebP Quality</h4>
-                                <div class="quality-value" id="qualityValue">80%</div>
-                            </div>
-                            <input type="range" id="qualitySlider" class="quality-slider" min="10" max="100" value="80">
-                            <div class="text-center mt-3">
-                                <small class="text-muted">Higher quality = larger file size</small>
-                            </div>
-                            
                             <!-- Conversion Mode Selector -->
-                            <div class="resize-option mt-4">
+                            <div class="resize-option">
                                 <div class="conversion-mode-label">
                                     <i class="fas fa-cog me-2"></i>Conversion Mode
                                 </div>
@@ -162,13 +157,53 @@
                                 </div>
                             </div>
 
+                            <!-- WebP Quality Control -->
+                            <div class="quality-section" id="qualitySection">
+                                <div class="quality-header">
+                                    <h4><i class="fas fa-sliders-h me-2"></i>WebP Quality</h4>
+                                    <div class="quality-value" id="qualityValue">80%</div>
+                                </div>
+                                <input type="range" id="qualitySlider" class="quality-slider" min="10" max="100" value="80">
+                                <div class="text-center mt-3">
+                                    <small class="text-muted">Higher quality = larger file size</small>
+                                </div>
+                            </div>
+
+                            <!-- Resize Controls -->
+                            <div class="resize-section d-none" id="resizeSection">
+                                <div class="resize-header">
+                                    <h4><i class="fas fa-expand-arrows-alt me-2"></i>Resize Dimensions</h4>
+                                </div>
+                                
+                                <div class="aspect-ratio-toggle">
+                                    <button class="aspect-btn active" id="aspectRatioBtn">
+                                        <i class="fas fa-link me-2"></i>
+                                        <span>Maintain Aspect Ratio</span>
+                                    </button>
+                                </div>
+
+                                <div class="dimension-inputs">
+                                    <div class="dimension-group">
+                                        <label>Width (px)</label>
+                                        <input type="number" id="widthInput" class="dimension-input" value="1920" min="1">
+                                    </div>
+                                    <div class="dimension-group">
+                                        <label>Height (px)</label>
+                                        <input type="number" id="heightInput" class="dimension-input" value="1080" min="1">
+                                    </div>
+                                </div>
+                                <div class="text-center mt-2">
+                                    <small class="text-muted" id="dimensionHint">Height will auto-adjust to maintain aspect ratio</small>
+                                </div>
+                            </div>
+
                             <!-- Batch Rename Section -->
                             <div class="batch-rename-section mt-4">
                                 <div class="rename-header">
                                     <i class="fas fa-pen me-2"></i>Batch Rename (Optional)
                                 </div>
                                 <div class="rename-input-group">
-                                    <input type="text" id="renamePrefix" class="rename-input" placeholder="e.g., cleaning_windows">
+                                    <input type="text" id="renamePrefix" class="rename-input" placeholder="e.g., my_photo">
                                     <div class="rename-preview" id="renamePreview">
                                         <small class="text-muted">Leave empty to keep original names</small>
                                     </div>
@@ -186,6 +221,13 @@
                                 <div class="text-center mt-2">
                                     <small class="text-muted">Uncheck for smaller files and better privacy</small>
                                 </div>
+                            </div>
+
+                            <!-- Preset Actions -->
+                            <div class="preset-actions mt-4">
+                                <button class="btn-custom btn-secondary" id="savePresetBtn">
+                                    <i class="fas fa-save me-2"></i>Save Current Settings as Preset
+                                </button>
                             </div>
                         </div>
 
@@ -219,6 +261,9 @@
                                 </button>
                                 <button class="bulk-btn" id="reconvertFailedBtn">
                                     <i class="fas fa-redo me-1"></i>Reconvert Failed
+                                </button>
+                                <button class="bulk-btn" id="duplicateDetectorBtn">
+                                    <i class="fas fa-copy me-1"></i>Find Duplicates
                                 </button>
                             </div>
                         </div>
@@ -272,167 +317,6 @@
                 </div>
             </div>
 
-            <!-- Advanced Tools Section -->
-            <div class="content-section" id="toolsSection">
-                <div class="section-header">
-                    <h2><i class="fas fa-tools me-3"></i>Advanced Tools</h2>
-                    <p>Enhance your images before conversion</p>
-                </div>
-                
-                <div class="tools-grid">
-                    <!-- Rotate & Flip Tool -->
-                    <div class="tool-card">
-                        <div class="tool-icon">
-                            <i class="fas fa-redo"></i>
-                        </div>
-                        <h4>Rotate & Flip</h4>
-                        <p>Rotate images 90°, 180°, 270° or flip horizontally/vertically</p>
-                        <button class="tool-btn" id="rotateToolBtn" data-tool="rotate">
-                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
-                        </button>
-                        
-                        <!-- Inline Controls -->
-                        <div class="tool-controls" id="rotateControls">
-                            <div class="tool-controls-header">
-                                <i class="fas fa-redo me-2"></i>Rotation & Flip Options
-                            </div>
-                            <div class="control-group">
-                                <label>Rotate</label>
-                                <div class="control-buttons">
-                                    <button class="control-btn" data-rotate="90">
-                                        <i class="fas fa-redo"></i>
-                                        <span>90°</span>
-                                    </button>
-                                    <button class="control-btn" data-rotate="180">
-                                        <i class="fas fa-sync"></i>
-                                        <span>180°</span>
-                                    </button>
-                                    <button class="control-btn" data-rotate="270">
-                                        <i class="fas fa-undo"></i>
-                                        <span>270°</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="control-group">
-                                <label>Flip</label>
-                                <div class="control-buttons">
-                                    <button class="control-btn" data-flip="horizontal">
-                                        <i class="fas fa-arrows-alt-h"></i>
-                                        <span>Horizontal</span>
-                                    </button>
-                                    <button class="control-btn" data-flip="vertical">
-                                        <i class="fas fa-arrows-alt-v"></i>
-                                        <span>Vertical</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <button class="apply-tool-btn" id="applyRotateBtn">
-                                <i class="fas fa-check me-2"></i>Apply Changes
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Background Removal Tool -->
-                    <div class="tool-card">
-                        <div class="tool-icon">
-                            <i class="fas fa-eraser"></i>
-                        </div>
-                        <h4>Background Removal</h4>
-                        <p>Remove or replace image backgrounds with solid colors</p>
-                        <button class="tool-btn" id="bgRemovalToolBtn" data-tool="background">
-                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
-                        </button>
-                        
-                        <!-- Inline Controls -->
-                        <div class="tool-controls" id="bgControls">
-                            <div class="tool-controls-header">
-                                <i class="fas fa-eraser me-2"></i>Background Options
-                            </div>
-                            <div class="control-group">
-                                <label>Background Type</label>
-                                <select id="bgOption" class="form-control">
-                                    <option value="transparent">Transparent (PNG only)</option>
-                                    <option value="white">White Background</option>
-                                    <option value="black">Black Background</option>
-                                    <option value="custom">Custom Color</option>
-                                </select>
-                            </div>
-                            <div class="control-group" id="customColorGroup" style="display: none;">
-                                <label>Custom Color</label>
-                                <input type="color" id="customBgColor" value="#ffffff">
-                            </div>
-                            <button class="apply-tool-btn" id="applyBgBtn">
-                                <i class="fas fa-check me-2"></i>Apply Background
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Quality Comparison Tool -->
-                    <div class="tool-card">
-                        <div class="tool-icon">
-                            <i class="fas fa-eye"></i>
-                        </div>
-                        <h4>Quality Comparison</h4>
-                        <p>Compare different quality settings side-by-side</p>
-                        <button class="tool-btn" id="qualityCompareBtn" data-tool="quality">
-                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
-                        </button>
-                        
-                        <!-- Inline Controls -->
-                        <div class="tool-controls" id="qualityControls">
-                            <div class="tool-controls-header">
-                                <i class="fas fa-eye me-2"></i>Quality Comparison
-                            </div>
-                            <div class="control-group">
-                                <label>Select Quality Levels to Compare</label>
-                                <div class="control-buttons">
-                                    <button class="control-btn active" data-quality="60">
-                                        <i class="fas fa-low-vision"></i>
-                                        <span>Low (60%)</span>
-                                    </button>
-                                    <button class="control-btn active" data-quality="80">
-                                        <i class="fas fa-eye"></i>
-                                        <span>Medium (80%)</span>
-                                    </button>
-                                    <button class="control-btn active" data-quality="95">
-                                        <i class="fas fa-eye"></i>
-                                        <span>High (95%)</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <button class="apply-tool-btn" id="applyQualityBtn">
-                                <i class="fas fa-check me-2"></i>Show Comparison
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Duplicate Detector Tool -->
-                    <div class="tool-card">
-                        <div class="tool-icon">
-                            <i class="fas fa-copy"></i>
-                        </div>
-                        <h4>Duplicate Detector</h4>
-                        <p>Find and remove duplicate or similar images</p>
-                        <button class="tool-btn" id="duplicateDetectorBtn" data-tool="duplicate">
-                            <i class="fas fa-chevron-down me-2"></i><span>Open Tool</span>
-                        </button>
-                        
-                        <!-- Inline Controls -->
-                        <div class="tool-controls" id="duplicateControls">
-                            <div class="tool-controls-header">
-                                <i class="fas fa-copy me-2"></i>Duplicate Detection
-                            </div>
-                            <div id="duplicateResults">
-                                <p class="text-center">Upload images first, then click scan to check for duplicates</p>
-                            </div>
-                            <button class="apply-tool-btn" id="scanDuplicatesBtn">
-                                <i class="fas fa-search me-2"></i>Scan for Duplicates
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- History Section -->
             <div class="content-section" id="historySection">
                 <div class="section-header">
@@ -470,6 +354,63 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Presets Section -->
+            <div class="content-section" id="presetsSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-save me-3"></i>Saved Presets</h2>
+                </div>
+                <div class="presets-grid" id="presetsGrid">
+                    <p class="text-center text-muted">No saved presets yet. Save your current settings from the converter page!</p>
+                </div>
+            </div>
+
+            <!-- Changelog Section -->
+            <div class="content-section" id="changelogSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-code-branch me-3"></i>Changelog</h2>
+                    <p>View code changes and updates</p>
+                </div>
+                
+                <div class="changelog-container">
+                    <div class="changelog-buttons">
+                        <button class="changelog-btn" data-file="html">
+                            <i class="fas fa-code me-2"></i>HTML Changes
+                        </button>
+                        <button class="changelog-btn" data-file="scss">
+                            <i class="fas fa-palette me-2"></i>SCSS Changes
+                        </button>
+                        <button class="changelog-btn" data-file="js">
+                            <i class="fas fa-js me-2"></i>JavaScript Changes
+                        </button>
+                    </div>
+                    
+                    <div class="changelog-viewer d-none" id="changelogViewer">
+                        <div class="changelog-header">
+                            <h3 id="changelogTitle">Changes</h3>
+                            <button class="btn-custom btn-secondary" id="closeChangelog">
+                                <i class="fas fa-times me-2"></i>Close
+                            </button>
+                        </div>
+                        <div class="changelog-content">
+                            <div class="changelog-split">
+                                <div class="changelog-side old">
+                                    <div class="side-label">
+                                        <i class="fas fa-minus-circle me-2"></i>Removed
+                                    </div>
+                                    <pre id="changelogOld"></pre>
+                                </div>
+                                <div class="changelog-side new">
+                                    <div class="side-label">
+                                        <i class="fas fa-plus-circle me-2"></i>Added
+                                    </div>
+                                    <pre id="changelogNew"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Live Preview Panel -->
@@ -485,6 +426,41 @@
                     <i class="fas fa-images"></i>
                     <p>Upload images to see live preview</p>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Reopen Preview Button -->
+        <button class="reopen-preview-btn d-none" id="reopenPreviewBtn">
+            <i class="fas fa-eye me-2"></i>Open Live Preview
+        </button>
+    </div>
+
+    <!-- Duplicate Results Modal -->
+    <div class="duplicate-modal d-none" id="duplicateModal">
+        <div class="duplicate-modal-content">
+            <button class="close-modal" id="closeDuplicateModal">&times;</button>
+            <div class="modal-header">
+                <h3><i class="fas fa-copy me-2"></i>Duplicate Detection Results</h3>
+            </div>
+            <div id="duplicateResults">
+                <p class="text-center">Scanning for duplicates...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Preset Modal -->
+    <div class="preset-modal d-none" id="presetModal">
+        <div class="preset-modal-content">
+            <button class="close-modal" id="closePresetModal">&times;</button>
+            <div class="modal-header">
+                <h3><i class="fas fa-save me-2"></i>Save Preset</h3>
+            </div>
+            <div class="preset-form">
+                <label>Preset Name</label>
+                <input type="text" id="presetNameInput" class="preset-input" placeholder="e.g., High Quality WebP">
+                <button class="btn-custom" id="confirmSavePreset">
+                    <i class="fas fa-check me-2"></i>Save Preset
+                </button>
             </div>
         </div>
     </div>
