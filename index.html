@@ -10,12 +10,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Sidebar Toggle Button -->
     <button class="sidebar-toggle" id="sidebarToggle">
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- Sidebar Navigation -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h3><i class="fas fa-magic me-2"></i>WebP Converter</h3>
@@ -24,7 +22,6 @@
             </button>
         </div>
 
-        <!-- Navigation Menu -->
         <nav class="sidebar-nav">
             <a href="#" class="nav-item active" data-section="converter">
                 <i class="fas fa-magic"></i>
@@ -48,7 +45,6 @@
             </a>
         </nav>
 
-        <!-- Quick Stats in Sidebar -->
         <div class="sidebar-stats">
             <div class="sidebar-stat-item">
                 <i class="fas fa-images"></i>
@@ -66,20 +62,15 @@
             </div>
         </div>
 
-        <!-- Footer -->
         <div class="sidebar-footer">
             <small>WebP Converter Pro v2.0</small>
         </div>
     </div>
 
-    <!-- Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Main Content -->
     <div class="main-content" id="mainContent">
-        <!-- Main Content Wrapper -->
         <div class="main-content-wrapper">
-            <!-- Converter Section -->
             <div class="content-section active" id="converterSection">
                 <div class="main-container">
                     <header class="hero-header">
@@ -95,7 +86,6 @@
                     </header>
 
                     <div class="content-section-inner">
-                        <!-- Upload Zone -->
                         <div class="upload-zone" id="uploadZone">
                             <i class="fas fa-cloud-upload-alt upload-icon"></i>
                             <h3>Drop your images here</h3>
@@ -103,7 +93,6 @@
                             <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png" class="d-none">
                         </div>
 
-                        <!-- URL Upload Section -->
                         <div class="url-upload-section mt-4 d-none" id="urlUploadSection">
                             <div class="url-upload-header">
                                 <i class="fas fa-link me-2"></i>Upload from URL
@@ -117,16 +106,13 @@
                             <div class="url-list" id="urlList"></div>
                         </div>
 
-                        <!-- Toggle URL Upload Button -->
                         <div class="text-center mt-3">
-                            <button class="btn-custom btn-secondary" id="toggleUrlUpload">
+                            <button class="btn-custom btn-styled" id="toggleUrlUpload">
                                 <i class="fas fa-link me-2"></i>Upload from URL
                             </button>
                         </div>
 
-                        <!-- Quality Control -->
                         <div class="quality-control d-none" id="qualityControl">
-                            <!-- Conversion Mode Selector -->
                             <div class="resize-option">
                                 <div class="conversion-mode-label">
                                     <i class="fas fa-cog me-2"></i>Conversion Mode
@@ -157,7 +143,6 @@
                                 </div>
                             </div>
 
-                            <!-- WebP Quality Control -->
                             <div class="quality-section" id="qualitySection">
                                 <div class="quality-header">
                                     <h4><i class="fas fa-sliders-h me-2"></i>WebP Quality</h4>
@@ -169,7 +154,6 @@
                                 </div>
                             </div>
 
-                            <!-- Resize Controls -->
                             <div class="resize-section d-none" id="resizeSection">
                                 <div class="resize-header">
                                     <h4><i class="fas fa-expand-arrows-alt me-2"></i>Resize Dimensions</h4>
@@ -197,7 +181,6 @@
                                 </div>
                             </div>
 
-                            <!-- Batch Rename Section -->
                             <div class="batch-rename-section mt-4">
                                 <div class="rename-header">
                                     <i class="fas fa-pen me-2"></i>Batch Rename (Optional)
@@ -210,7 +193,6 @@
                                 </div>
                             </div>
 
-                            <!-- EXIF Data Option -->
                             <div class="exif-option mt-4">
                                 <div class="form-check form-switch d-flex justify-content-center align-items-center">
                                     <input class="form-check-input me-3" type="checkbox" id="preserveExif" style="transform: scale(1.2);">
@@ -223,15 +205,13 @@
                                 </div>
                             </div>
 
-                            <!-- Preset Actions -->
                             <div class="preset-actions mt-4">
-                                <button class="btn-custom btn-secondary" id="savePresetBtn">
+                                <button class="btn-custom btn-styled" id="savePresetBtn">
                                     <i class="fas fa-save me-2"></i>Save Current Settings as Preset
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Action Buttons -->
                         <div class="action-buttons d-none" id="actionButtons">
                             <button class="btn-custom" id="convertBtn">
                                 <i class="fas fa-magic me-2"></i>Start Conversion
@@ -244,7 +224,6 @@
                             </button>
                         </div>
 
-                        <!-- Bulk Actions -->
                         <div class="bulk-actions d-none" id="bulkActions">
                             <div class="bulk-actions-header">
                                 <i class="fas fa-tasks me-2"></i>Bulk Actions
@@ -268,7 +247,6 @@
                             </div>
                         </div>
 
-                        <!-- Progress Section -->
                         <div class="progress-section d-none" id="progressSection">
                             <div class="overall-progress">
                                 <div class="progress-text" id="progressText">Ready to convert</div>
@@ -279,7 +257,6 @@
                             </div>
                         </div>
 
-                        <!-- Statistics -->
                         <div class="stats-grid d-none" id="statsGrid">
                             <div class="stat-card">
                                 <div class="stat-icon text-primary">
@@ -311,28 +288,25 @@
                             </div>
                         </div>
 
-                        <!-- File List -->
                         <div class="file-list" id="fileList"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- History Section -->
             <div class="content-section" id="historySection">
-                <div class="section-header">
+                <div class="section-header-centered">
                     <h2><i class="fas fa-history me-3"></i>Conversion History</h2>
-                    <button class="btn-custom btn-secondary" id="clearHistoryBtn">
+                    <button class="btn-custom btn-styled btn-danger" id="clearHistoryBtn">
                         <i class="fas fa-trash me-2"></i>Clear History
                     </button>
                 </div>
                 <div class="history-list" id="historyList">
-                    <p class="text-center text-muted">No conversion history yet. Start converting images!</p>
+                    <p class="text-center text-muted-white">No conversion history yet. Start converting images!</p>
                 </div>
             </div>
 
-            <!-- Statistics Section -->
             <div class="content-section" id="statsSection">
-                <div class="section-header">
+                <div class="section-header-centered">
                     <h2><i class="fas fa-chart-bar me-3"></i>Statistics</h2>
                 </div>
                 <div class="stats-dashboard">
@@ -355,21 +329,19 @@
                 </div>
             </div>
 
-            <!-- Presets Section -->
             <div class="content-section" id="presetsSection">
-                <div class="section-header">
+                <div class="section-header-centered">
                     <h2><i class="fas fa-save me-3"></i>Saved Presets</h2>
                 </div>
                 <div class="presets-grid" id="presetsGrid">
-                    <p class="text-center text-muted">No saved presets yet. Save your current settings from the converter page!</p>
+                    <p class="text-center text-muted-white">No saved presets yet. Save your current settings from the converter page!</p>
                 </div>
             </div>
 
-            <!-- Changelog Section -->
             <div class="content-section" id="changelogSection">
-                <div class="section-header">
+                <div class="section-header-centered">
                     <h2><i class="fas fa-code-branch me-3"></i>Changelog</h2>
-                    <p>View code changes and updates</p>
+                    <p>View all code changes and updates</p>
                 </div>
                 
                 <div class="changelog-container">
@@ -381,14 +353,14 @@
                             <i class="fas fa-palette me-2"></i>SCSS Changes
                         </button>
                         <button class="changelog-btn" data-file="js">
-                            <i class="fas fa-js me-2"></i>JavaScript Changes
+                            <i class="fab fa-js-square me-2"></i>JavaScript Changes
                         </button>
                     </div>
                     
                     <div class="changelog-viewer d-none" id="changelogViewer">
                         <div class="changelog-header">
                             <h3 id="changelogTitle">Changes</h3>
-                            <button class="btn-custom btn-secondary" id="closeChangelog">
+                            <button class="btn-changelog-close" id="closeChangelog">
                                 <i class="fas fa-times me-2"></i>Close
                             </button>
                         </div>
@@ -413,7 +385,6 @@
             </div>
         </div>
 
-        <!-- Live Preview Panel -->
         <div class="live-preview-panel" id="livePreviewPanel">
             <div class="preview-panel-header">
                 <h3><i class="fas fa-eye"></i> Live Preview</h3>
@@ -429,13 +400,11 @@
             </div>
         </div>
         
-        <!-- Reopen Preview Button -->
         <button class="reopen-preview-btn d-none" id="reopenPreviewBtn">
             <i class="fas fa-eye me-2"></i>Open Live Preview
         </button>
     </div>
 
-    <!-- Duplicate Results Modal -->
     <div class="duplicate-modal d-none" id="duplicateModal">
         <div class="duplicate-modal-content">
             <button class="close-modal" id="closeDuplicateModal">&times;</button>
@@ -448,7 +417,6 @@
         </div>
     </div>
 
-    <!-- Save Preset Modal -->
     <div class="preset-modal d-none" id="presetModal">
         <div class="preset-modal-content">
             <button class="close-modal" id="closePresetModal">&times;</button>

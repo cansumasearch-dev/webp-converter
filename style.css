@@ -49,6 +49,46 @@ body::before {
     transform: translateY(10px) rotate(-1deg);
   }
 }
+.btn-styled {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none;
+  border-radius: 12px;
+  padding: 0.8rem 1.5rem;
+  color: white !important;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+  display: inline-block;
+}
+.btn-styled:hover {
+  box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+}
+@media (max-width: 768px) {
+  .btn-styled {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.95rem;
+  }
+}
+.btn-styled:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+.btn-styled:active {
+  transform: translateY(-1px);
+}
+.btn-styled.btn-danger {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+  box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
+}
+.btn-styled.btn-danger:hover {
+  box-shadow: 0 0 30px rgba(220, 53, 69, 0.5);
+}
+.btn-styled.btn-danger:hover {
+  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+}
+
 .sidebar-toggle {
   position: fixed;
   top: 1.5rem;
@@ -1350,7 +1390,7 @@ body::before {
 .file-list .file-item .file-header .file-actions .status-icon.pending {
   color: #999;
 }
-.file-list .file-item .file-header .file-actions .tool-btn, .file-list .file-item .file-header .file-actions .preview-btn, .file-list .file-item .file-header .file-actions .download-btn, .file-list .file-item .file-header .file-actions .remove-btn {
+.file-list .file-item .file-header .file-actions .tool-btn, .file-list .file-item .file-header .file-actions .preview-btn, .file-list .file-item .file-header .file-actions .download-btn, .file-list .file-item .file-header .file-actions .remove-btn, .file-list .file-item .file-header .file-actions .reset-btn {
   background: rgba(255, 255, 255, 0.8);
   border: 2px solid transparent;
   border-radius: 8px;
@@ -1363,17 +1403,39 @@ body::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 @media (max-width: 768px) {
-  .file-list .file-item .file-header .file-actions .tool-btn, .file-list .file-item .file-header .file-actions .preview-btn, .file-list .file-item .file-header .file-actions .download-btn, .file-list .file-item .file-header .file-actions .remove-btn {
+  .file-list .file-item .file-header .file-actions .tool-btn, .file-list .file-item .file-header .file-actions .preview-btn, .file-list .file-item .file-header .file-actions .download-btn, .file-list .file-item .file-header .file-actions .remove-btn, .file-list .file-item .file-header .file-actions .reset-btn {
     width: 32px;
     height: 32px;
     font-size: 0.8rem;
   }
 }
-.file-list .file-item .file-header .file-actions .tool-btn:hover, .file-list .file-item .file-header .file-actions .preview-btn:hover, .file-list .file-item .file-header .file-actions .download-btn:hover, .file-list .file-item .file-header .file-actions .remove-btn:hover {
+.file-list .file-item .file-header .file-actions .tool-btn:hover, .file-list .file-item .file-header .file-actions .preview-btn:hover, .file-list .file-item .file-header .file-actions .download-btn:hover, .file-list .file-item .file-header .file-actions .remove-btn:hover, .file-list .file-item .file-header .file-actions .reset-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.file-list .file-item .file-header .file-actions .tool-btn:hover::after, .file-list .file-item .file-header .file-actions .preview-btn:hover::after, .file-list .file-item .file-header .file-actions .download-btn:hover::after, .file-list .file-item .file-header .file-actions .remove-btn:hover::after, .file-list .file-item .file-header .file-actions .reset-btn:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin-bottom: 0.5rem;
+  z-index: 1000;
+  pointer-events: none;
+}
+.file-list .file-item .file-header .file-actions .tool-btn.active, .file-list .file-item .file-header .file-actions .preview-btn.active, .file-list .file-item .file-header .file-actions .download-btn.active, .file-list .file-item .file-header .file-actions .remove-btn.active, .file-list .file-item .file-header .file-actions .reset-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
 }
 .file-list .file-item .file-header .file-actions .tool-btn:hover {
   border-color: #667eea;
@@ -1386,6 +1448,10 @@ body::before {
 .file-list .file-item .file-header .file-actions .download-btn:hover {
   border-color: #28a745;
   color: #28a745;
+}
+.file-list .file-item .file-header .file-actions .reset-btn:hover {
+  border-color: #ffc107;
+  color: #ffc107;
 }
 .file-list .file-item .file-header .file-actions .remove-btn:hover {
   border-color: #dc3545;
@@ -1448,39 +1514,29 @@ body::before {
     transform: rotate(360deg);
   }
 }
-.section-header {
+.section-header-centered {
   text-align: center;
   margin-bottom: 3rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
 }
-@media (max-width: 768px) {
-  .section-header {
-    flex-direction: column;
-  }
-}
-.section-header h2 {
+.section-header-centered h2 {
   font-size: 2.5rem;
   font-weight: 700;
   color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 1rem;
 }
 @media (max-width: 768px) {
-  .section-header h2 {
+  .section-header-centered h2 {
     font-size: 2rem;
   }
 }
-.section-header p {
+.section-header-centered p {
   font-size: 1.2rem;
   color: rgba(255, 255, 255, 0.9);
-  margin: 0;
+  margin: 0 0 2rem 0;
 }
 @media (max-width: 768px) {
-  .section-header p {
+  .section-header-centered p {
     font-size: 1rem;
   }
 }
@@ -1519,12 +1575,12 @@ body::before {
 }
 .history-list .history-item .history-info .history-date {
   font-size: 0.85rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 0.3rem;
 }
 .history-list .history-item .history-info .history-details {
   font-size: 0.9rem;
-  color: #333;
+  color: white;
   font-weight: 500;
 }
 .history-list .history-item .history-stats {
@@ -1662,6 +1718,8 @@ body::before {
 
 .changelog-container {
   padding: 2rem;
+  background: white;
+  border-radius: 20px;
 }
 @media (max-width: 768px) {
   .changelog-container {
@@ -1714,26 +1772,25 @@ body::before {
   margin-bottom: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
 }
 .changelog-container .changelog-viewer .changelog-header h3 {
-  color: white;
+  color: #333;
   font-size: 2rem;
   font-weight: 700;
   margin: 0;
 }
 .changelog-container .changelog-viewer .changelog-content {
-  background: rgba(255, 255, 255, 0.25);
-  -webkit-backdrop-filter: blur(10px);
-          backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 20px;
+  background: white;
+  border-radius: 15px;
   overflow: hidden;
+  border: 2px solid #e0e0e0;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  background: rgba(0, 0, 0, 0.1);
+  gap: 0;
 }
 @media (max-width: 1024px) {
   .changelog-container .changelog-viewer .changelog-content .changelog-split {
@@ -1743,17 +1800,27 @@ body::before {
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side {
   padding: 2rem;
   min-height: 400px;
-  max-height: 600px;
+  max-height: 70vh;
   overflow-y: auto;
+  background: white;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side.old {
-  background: rgba(255, 99, 99, 0.1);
+  border-right: 2px solid #e0e0e0;
+}
+@media (max-width: 1024px) {
+  .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side.old {
+    border-right: none;
+    border-bottom: 2px solid #e0e0e0;
+  }
+}
+.changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side.old .side-label {
+  color: #d32f2f;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side.old pre {
   color: #d32f2f;
 }
-.changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side.new {
-  background: rgba(76, 175, 80, 0.1);
+.changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side.new .side-label {
+  color: #388e3c;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side.new pre {
   color: #388e3c;
@@ -1761,30 +1828,60 @@ body::before {
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side .side-label {
   font-weight: 700;
   font-size: 1.2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid currentColor;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side .side-label i {
   margin-right: 0.5rem;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side pre {
   font-family: "Courier New", monospace;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
   margin: 0;
 }
+@media (max-width: 768px) {
+  .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side pre {
+    font-size: 0.75rem;
+  }
+}
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side::-webkit-scrollbar {
   width: 8px;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: #f5f5f5;
 }
 .changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: #bbb;
   border-radius: 4px;
+}
+.changelog-container .changelog-viewer .changelog-content .changelog-split .changelog-side::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.btn-changelog-close {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  border: none;
+  border-radius: 10px;
+  padding: 0.8rem 1.5rem;
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
+}
+.btn-changelog-close:hover {
+  box-shadow: 0 0 30px rgba(220, 53, 69, 0.5);
+}
+.btn-changelog-close:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
 }
 
 @keyframes slideDown {
@@ -2107,6 +2204,10 @@ body::before {
 
 .text-muted {
   color: #666;
+}
+
+.text-muted-white {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .mt-2 {

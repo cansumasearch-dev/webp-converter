@@ -422,6 +422,7 @@ class ImageConverter {
         const previewsHTML = await Promise.all(
             this.files.slice(0, 10).map(async (fileObj) => {
                 const originalUrl = await this.fileToDataUrl(fileObj.file);
+                const previewUrl = await this.generatePreviewWithTransforms(fileObj);
                 
                 return `
                     <div class="preview-item-card">
@@ -434,8 +435,8 @@ class ImageConverter {
                             </div>
                             <div class="preview-image-wrapper">
                                 <div class="preview-label">Preview</div>
-                                <img src="${originalUrl}" alt="Preview" class="preview-img">
-                                <div class="preview-size">Processing...</div>
+                                <img src="${previewUrl}" alt="Preview" class="preview-img">
+                                <div class="preview-size">With transforms</div>
                             </div>
                         </div>
                     </div>
@@ -448,6 +449,49 @@ class ImageConverter {
         if (this.files.length > 10) {
             this.previewPanelContent.innerHTML += '<p class="text-center text-muted mt-3">Showing first 10 images</p>';
         }
+    }
+
+    async generatePreviewWithTransforms(fileObj) {
+        const transforms = this.fileTransforms.get(fileObj.id);
+        if (!transforms || (transforms.rotate === 0 && !transforms.flipH && !transforms.flipV && !transforms.background)) {
+            return await this.fileToDataUrl(fileObj.file);
+        }
+        
+        return new Promise(async (resolve) => {
+            const img = new Image();
+            const originalUrl = await this.fileToDataUrl(fileObj.file);
+            
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                if (transforms.rotate === 90 || transforms.rotate === 270) {
+                    canvas.width = img.height;
+                    canvas.height = img.width;
+                } else {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                }
+                
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(transforms.rotate * Math.PI / 180);
+                if (transforms.flipH) ctx.scale(-1, 1);
+                if (transforms.flipV) ctx.scale(1, -1);
+                
+                if (transforms.background === 'white') {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(-img.width / 2, -img.height / 2, img.width, img.height);
+                }
+                
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                ctx.restore();
+                
+                resolve(canvas.toDataURL());
+            };
+            
+            img.src = originalUrl;
+        });
     }
 
     // File handling
@@ -582,9 +626,10 @@ class ImageConverter {
                 : '';
             
             const transforms = this.fileTransforms.get(fileObj.id) || {};
+            const hasTransforms = transforms.rotate !== 0 || transforms.flipH || transforms.flipV || transforms.background;
             
-            const toolButtons = `
-                <button class="tool-btn" data-file-id="${fileObj.id}" data-tool="rotate" title="Rotate">
+            const toolButtons = fileObj.status === 'pending' ? `
+                <button class="tool-btn" data-file-id="${fileObj.id}" data-tool="rotate" title="Rotate 90°">
                     <i class="fas fa-redo"></i>
                 </button>
                 <button class="tool-btn ${transforms.flipH ? 'active' : ''}" data-file-id="${fileObj.id}" data-tool="flipH" title="Flip Horizontal">
@@ -593,10 +638,13 @@ class ImageConverter {
                 <button class="tool-btn ${transforms.flipV ? 'active' : ''}" data-file-id="${fileObj.id}" data-tool="flipV" title="Flip Vertical">
                     <i class="fas fa-arrows-alt-v"></i>
                 </button>
-                <button class="tool-btn" data-file-id="${fileObj.id}" data-tool="background" title="Background">
+                <button class="tool-btn ${transforms.background === 'white' ? 'active' : ''}" data-file-id="${fileObj.id}" data-tool="background" title="White Background">
                     <i class="fas fa-fill-drip"></i>
                 </button>
-            `;
+                ${hasTransforms ? `<button class="reset-btn" data-file-id="${fileObj.id}" title="Reset All Changes">
+                    <i class="fas fa-undo"></i>
+                </button>` : ''}
+            ` : '';
             
             const downloadBtn = fileObj.status === 'completed' 
                 ? `<button class="download-btn" data-file-id="${fileObj.id}" title="Download">
@@ -605,12 +653,12 @@ class ImageConverter {
                 : '';
             
             const previewBtn = fileObj.status === 'completed' 
-                ? `<button class="preview-btn" data-file-id="${fileObj.id}" title="Preview">
+                ? `<button class="preview-btn" data-file-id="${fileObj.id}" title="Preview Before/After">
                      <i class="fas fa-eye"></i>
                    </button>` 
                 : '';
             
-            const removeBtn = `<button class="remove-btn" data-file-id="${fileObj.id}" title="Remove">
+            const removeBtn = `<button class="remove-btn" data-file-id="${fileObj.id}" title="Remove File">
                 <i class="fas fa-times"></i>
             </button>`;
             
@@ -624,7 +672,7 @@ class ImageConverter {
                     <div class="file-actions">
                         ${savingsText}
                         <i class="${statusIcon}"></i>
-                        ${fileObj.status === 'pending' ? toolButtons : ''}
+                        ${toolButtons}
                         ${previewBtn}
                         ${downloadBtn}
                         ${removeBtn}
@@ -637,6 +685,7 @@ class ImageConverter {
                     ${transforms.rotate ? ` • Rotated ${transforms.rotate}°` : ''}
                     ${transforms.flipH ? ` • Flipped H` : ''}
                     ${transforms.flipV ? ` • Flipped V` : ''}
+                    ${transforms.background ? ` • White BG` : ''}
                 </div>
             `;
             
@@ -649,6 +698,13 @@ class ImageConverter {
                 const fileId = parseFloat(e.currentTarget.getAttribute('data-file-id'));
                 const tool = e.currentTarget.getAttribute('data-tool');
                 this.applyIndividualTool(fileId, tool);
+            });
+        });
+        
+        this.fileList.querySelectorAll('.reset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const fileId = parseFloat(e.currentTarget.getAttribute('data-file-id'));
+                this.resetFileTransforms(fileId);
             });
         });
         
@@ -689,10 +745,22 @@ class ImageConverter {
                 transforms.flipV = !transforms.flipV;
                 break;
             case 'background':
-                // Simple toggle between white and transparent
                 transforms.background = transforms.background === 'white' ? null : 'white';
                 break;
         }
+        
+        this.renderFileList();
+        this.updateLivePreview();
+    }
+
+    resetFileTransforms(fileId) {
+        const transforms = this.fileTransforms.get(fileId);
+        if (!transforms) return;
+        
+        transforms.rotate = 0;
+        transforms.flipH = false;
+        transforms.flipV = false;
+        transforms.background = null;
         
         this.renderFileList();
         this.updateLivePreview();
@@ -1146,7 +1214,7 @@ class ImageConverter {
 
     renderPresets() {
         if (this.presets.length === 0) {
-            this.presetsGrid.innerHTML = '<p class="text-center text-muted">No saved presets yet. Save your current settings from the converter page!</p>';
+            this.presetsGrid.innerHTML = '<p class="text-center text-muted-white">No saved presets yet. Save your current settings from the converter page!</p>';
             return;
         }
         
@@ -1196,7 +1264,12 @@ class ImageConverter {
         this.preserveExif = preset.preserveExif;
         
         // Update UI elements
-        document.getElementById(`mode${preset.conversionMode.charAt(0).toUpperCase() + preset.conversionMode.slice(1)}`).checked = true;
+        const modeMap = {
+            'webp': 'modeWebpOnly',
+            'resize': 'modeResizeOnly',
+            'both': 'modeBoth'
+        };
+        document.getElementById(modeMap[preset.conversionMode]).checked = true;
         this.qualitySlider.value = Math.round(preset.quality * 100);
         this.qualityValue.textContent = Math.round(preset.quality * 100) + '%';
         this.widthInput.value = preset.targetWidth;
@@ -1227,7 +1300,7 @@ class ImageConverter {
         this.renderPresets();
     }
 
-    // Changelog
+    // Changelog - COMPLETE CODE CHANGES
     showChangelog(file) {
         this.changelogViewer.classList.remove('d-none');
         
@@ -1241,222 +1314,831 @@ class ImageConverter {
         
         const changes = {
             'html': {
-                old: `<!-- Old HTML structure -->
+                old: `<!-- OLD VERSION - Basic Structure -->
+<div class="upload-zone">
+    <input type="file" id="fileInput">
+</div>
+
+<!-- Simple quality slider -->
 <div class="quality-control">
-    <div class="quality-slider"></div>
-</div>`,
-                new: `<!-- New HTML with mode-based sections -->
+    <input type="range" id="qualitySlider">
+</div>
+
+<!-- Basic buttons -->
+<button id="convertBtn">Convert</button>
+<button id="clearBtn">Clear</button>
+
+<!-- Simple file list -->
+<div class="file-list" id="fileList"></div>
+
+<!-- No sidebar navigation -->
+<!-- No live preview -->
+<!-- No presets system -->
+<!-- No changelog viewer -->`,
+                new: `<!-- NEW VERSION - Advanced Features -->
+
+<!-- Sidebar Navigation -->
+<div class="sidebar" id="sidebar">
+    <nav class="sidebar-nav">
+        <a class="nav-item" data-section="converter">Converter</a>
+        <a class="nav-item" data-section="history">History</a>
+        <a class="nav-item" data-section="stats">Statistics</a>
+        <a class="nav-item" data-section="presets">Presets</a>
+        <a class="nav-item" data-section="changelog">Changelog</a>
+    </nav>
+</div>
+
+<!-- Upload with URL support -->
+<div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" multiple>
+</div>
+<button class="btn-styled" id="toggleUrlUpload">Upload from URL</button>
+<div class="url-upload-section" id="urlUploadSection">
+    <input type="text" id="urlInput">
+    <button id="urlAddBtn">Add URL</button>
+</div>
+
+<!-- Advanced Conversion Modes -->
 <div class="quality-control">
-    <div class="conversion-mode-selector">
-        <!-- Mode selection -->
+    <div class="segmented-control">
+        <input type="radio" name="conversionMode" id="modeWebpOnly" value="webp" checked>
+        <label for="modeWebpOnly">WebP Only</label>
+        
+        <input type="radio" name="conversionMode" id="modeResizeOnly" value="resize">
+        <label for="modeResizeOnly">Resize Only</label>
+        
+        <input type="radio" name="conversionMode" id="modeBoth" value="both">
+        <label for="modeBoth">Both</label>
     </div>
+    
+    <!-- WebP Quality Section -->
     <div class="quality-section" id="qualitySection">
-        <!-- WebP quality slider -->
+        <input type="range" id="qualitySlider" min="10" max="100" value="80">
     </div>
-    <div class="resize-section d-none" id="resizeSection">
-        <!-- Width/height controls -->
-        <button class="aspect-btn" id="aspectRatioBtn">
+    
+    <!-- Resize Section with Aspect Ratio -->
+    <div class="resize-section" id="resizeSection">
+        <button class="aspect-btn active" id="aspectRatioBtn">
             Maintain Aspect Ratio
         </button>
-        <input type="number" id="widthInput">
-        <input type="number" id="heightInput">
+        <input type="number" id="widthInput" value="1920">
+        <input type="number" id="heightInput" value="1080">
+    </div>
+    
+    <!-- Batch Rename -->
+    <div class="batch-rename-section">
+        <input type="text" id="renamePrefix" placeholder="prefix">
+    </div>
+    
+    <!-- Save Preset Button -->
+    <button class="btn-styled" id="savePresetBtn">
+        Save Current Settings as Preset
+    </button>
+</div>
+
+<!-- Enhanced Action Buttons -->
+<div class="action-buttons">
+    <button class="btn-custom" id="convertBtn">Start Conversion</button>
+    <button class="btn-custom btn-secondary" id="clearBtn">Clear All</button>
+    <button class="btn-custom btn-success" id="downloadAllBtn">Download ZIP</button>
+</div>
+
+<!-- Bulk Actions -->
+<div class="bulk-actions">
+    <button id="sortBySizeBtn">Sort by Size</button>
+    <button id="sortBySavingsBtn">Sort by Savings</button>
+    <button id="removeFailedBtn">Remove Failed</button>
+    <button id="duplicateDetectorBtn">Find Duplicates</button>
+</div>
+
+<!-- Enhanced File List with Tools -->
+<div class="file-list" id="fileList">
+    <!-- Each file now has: -->
+    <div class="file-item">
+        <div class="file-actions">
+            <button class="tool-btn" title="Rotate">🔄</button>
+            <button class="tool-btn" title="Flip H">↔️</button>
+            <button class="tool-btn" title="Flip V">↕️</button>
+            <button class="tool-btn" title="Background">🎨</button>
+            <button class="reset-btn" title="Reset">↩️</button>
+            <button class="preview-btn" title="Preview">👁️</button>
+            <button class="download-btn" title="Download">⬇️</button>
+            <button class="remove-btn" title="Remove">❌</button>
+        </div>
     </div>
 </div>
 
-<!-- New: Reopen Preview Button -->
+<!-- Live Preview Panel -->
+<div class="live-preview-panel" id="livePreviewPanel">
+    <div class="preview-panel-content" id="previewPanelContent">
+        <!-- Before/after previews with transforms -->
+    </div>
+</div>
 <button class="reopen-preview-btn" id="reopenPreviewBtn">
     Open Live Preview
 </button>
 
-<!-- New: Presets Page -->
-<div class="content-section" id="presetsSection">
-    <div class="presets-grid"></div>
+<!-- History Section -->
+<div class="content-section" id="historySection">
+    <div class="section-header-centered">
+        <h2>Conversion History</h2>
+        <button class="btn-styled btn-danger" id="clearHistoryBtn">
+            Clear History
+        </button>
+    </div>
+    <div class="history-list" id="historyList"></div>
 </div>
 
-<!-- New: Individual Tool Buttons on Each Image -->
-<div class="file-actions">
-    <button class="tool-btn" data-tool="rotate">
-    <button class="tool-btn" data-tool="flipH">
-    <button class="tool-btn" data-tool="flipV">
-    <button class="remove-btn">×</button>
+<!-- Statistics Dashboard -->
+<div class="content-section" id="statsSection">
+    <div class="section-header-centered">
+        <h2>Statistics</h2>
+    </div>
+    <div class="stats-dashboard">
+        <div class="dashboard-card">Total Conversions</div>
+        <div class="dashboard-card">Space Saved</div>
+        <div class="dashboard-card">Average Savings</div>
+    </div>
+</div>
+
+<!-- Presets System -->
+<div class="content-section" id="presetsSection">
+    <div class="section-header-centered">
+        <h2>Saved Presets</h2>
+    </div>
+    <div class="presets-grid" id="presetsGrid">
+        <!-- Preset cards with load/delete buttons -->
+    </div>
+</div>
+
+<!-- Changelog Viewer -->
+<div class="content-section" id="changelogSection">
+    <div class="section-header-centered">
+        <h2>Changelog</h2>
+    </div>
+    <div class="changelog-container">
+        <div class="changelog-buttons">
+            <button class="changelog-btn" data-file="html">HTML Changes</button>
+            <button class="changelog-btn" data-file="scss">SCSS Changes</button>
+            <button class="changelog-btn" data-file="js">JS Changes</button>
+        </div>
+        <div class="changelog-viewer">
+            <div class="changelog-split">
+                <div class="changelog-side old">
+                    <pre id="changelogOld"></pre>
+                </div>
+                <div class="changelog-side new">
+                    <pre id="changelogNew"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="preset-modal" id="presetModal">
+    <input type="text" id="presetNameInput">
+    <button id="confirmSavePreset">Save</button>
+</div>
+
+<div class="duplicate-modal" id="duplicateModal">
+    <div id="duplicateResults"></div>
 </div>`
             },
             'scss': {
-                old: `// Old styling - single quality section
-.quality-control {
-    .quality-slider {
-        width: 100%;
-    }
+                old: `// OLD VERSION - Basic Styling
+.upload-zone {
+    border: 2px dashed #ccc;
+    padding: 2rem;
+}
+
+.quality-slider {
+    width: 100%;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    background: blue;
+    color: white;
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.file-item {
+    padding: 1rem;
+    border: 1px solid #ddd;
 }`,
-                new: `// New styling - dynamic sections
-.quality-section {
-    // Only shown in WebP/Both modes
+                new: `// NEW VERSION - Professional Design System
+
+// Variables
+$primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+
+// Mixins
+@mixin glassmorphism {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-.resize-section {
-    // Only shown in Resize/Both modes
+@mixin button-glow($color: $primary-color) {
+    box-shadow: 0 0 20px rgba($color, 0.3);
+    &:hover {
+        box-shadow: 0 0 30px rgba($color, 0.5);
+    }
+}
+
+// Styled Buttons - NEW
+.btn-styled {
+    background: $primary-gradient !important;
+    border: none;
+    border-radius: 12px;
+    padding: 0.8rem 1.5rem;
+    color: white !important;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    @include button-glow();
     
-    .aspect-ratio-toggle {
-        .aspect-btn {
+    &:hover {
+        transform: translateY(-3px);
+    }
+    
+    &.btn-danger {
+        background: $danger-gradient !important;
+    }
+}
+
+// Sidebar Navigation
+.sidebar {
+    position: fixed;
+    width: 280px;
+    height: 100vh;
+    background: linear-gradient(180deg, rgba(102, 126, 234, 0.95), rgba(118, 75, 162, 0.95));
+    backdrop-filter: blur(20px);
+    transition: left 0.3s ease;
+    
+    .sidebar-nav {
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.1);
+                padding-left: 2rem;
+            }
+            
             &.active {
-                background: $primary-gradient;
-                i { transform: rotate(0deg); }
+                background: rgba(255, 255, 255, 0.15);
+                border-left: 3px solid white;
             }
-            &:not(.active) {
-                i { transform: rotate(45deg); }
-            }
-        }
-    }
-    
-    .dimension-inputs {
-        grid-template-columns: 1fr 1fr;
-        .dimension-input:disabled {
-            opacity: 0.6;
         }
     }
 }
 
-// New: Reopen preview button styling
+// Enhanced Upload Zone
+.upload-zone {
+    @include glassmorphism;
+    border: 3px dashed rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.8);
+        @include button-glow(#ffffff);
+    }
+    
+    &.dragover {
+        border-color: #4facfe;
+        transform: scale(1.02);
+    }
+}
+
+// Segmented Control for Modes
+.segmented-control {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    
+    label {
+        background: rgba(255, 255, 255, 0.8);
+        padding: 1.5rem 1rem;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        
+        &:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+    }
+    
+    input:checked + label {
+        background: $primary-gradient;
+        color: white;
+        transform: scale(1.05);
+    }
+}
+
+// Aspect Ratio Toggle
+.aspect-ratio-toggle {
+    .aspect-btn {
+        &.active {
+            background: $primary-gradient;
+            color: white;
+            i { transform: rotate(0deg); }
+        }
+        &:not(.active) {
+            i { transform: rotate(45deg); }
+        }
+    }
+}
+
+// Tool Buttons with Tooltips
+.tool-btn, .preview-btn, .download-btn, .remove-btn, .reset-btn {
+    background: rgba(255, 255, 255, 0.8);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        
+        // Tooltip on hover
+        &::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+    }
+    
+    &.active {
+        background: $primary-gradient;
+        color: white;
+    }
+}
+
+// Live Preview Panel
+.live-preview-panel {
+    width: 400px;
+    position: sticky;
+    top: 2rem;
+    height: calc(100vh - 4rem);
+    
+    .preview-item-card {
+        @include glassmorphism;
+        border-radius: 12px;
+        padding: 1rem;
+        transition: all 0.3s ease;
+        
+        &:hover {
+            border-color: $primary-color;
+            transform: translateY(-2px);
+        }
+    }
+}
+
+// Centered Section Headers
+.section-header-centered {
+    text-align: center;
+    margin-bottom: 3rem;
+    
+    h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+}
+
+// Presets Grid
+.presets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    
+    .preset-card {
+        @include glassmorphism;
+        border-radius: 20px;
+        padding: 2rem;
+        transition: all 0.3s ease;
+        
+        &:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+    }
+}
+
+// Changelog Container - WHITE BACKGROUND
+.changelog-container {
+    padding: 2rem;
+    background: white;
+    border-radius: 20px;
+    
+    .changelog-viewer {
+        .changelog-content {
+            background: white;
+            border: 2px solid #e0e0e0;
+            
+            .changelog-split {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                
+                .changelog-side {
+                    background: white;
+                    padding: 2rem;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                    
+                    &.old {
+                        border-right: 2px solid #e0e0e0;
+                        .side-label { color: #d32f2f; }
+                        pre { color: #d32f2f; }
+                    }
+                    
+                    &.new {
+                        .side-label { color: #388e3c; }
+                        pre { color: #388e3c; }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Close Changelog Button
+.btn-changelog-close {
+    background: $danger-gradient;
+    border: none;
+    border-radius: 10px;
+    padding: 0.8rem 1.5rem;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    @include button-glow($danger-color);
+    
+    &:hover {
+        transform: translateY(-3px);
+    }
+}
+
+// Reopen Preview Button
 .reopen-preview-btn {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
     background: $primary-gradient;
+    border-radius: 50px;
+    padding: 1rem 2rem;
+    color: white;
+    @include button-glow();
     z-index: 1000;
-}
-
-// New: Individual tool buttons
-.file-item {
-    .tool-btn {
-        width: 36px;
-        height: 36px;
-        &.active {
-            background: $primary-gradient;
-            color: white;
-        }
-    }
-    .remove-btn {
-        &:hover {
-            border-color: $danger-color;
-            color: $danger-color;
-        }
-    }
-}
-
-// New: Preset cards
-.preset-card {
-    @include glassmorphism;
-    .preset-settings {
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-        }
+    
+    &:hover {
+        transform: translateY(-5px) scale(1.05);
     }
 }`
             },
             'js': {
-                old: `// Old JS - single mode
-this.quality = 0.8;
-this.targetWidth = 1000;
-
-convertFile(fileObj) {
-    // Simple conversion
-    if (img.width > this.targetWidth) {
-        // resize
+                old: `// OLD VERSION - Basic Functionality
+class ImageConverter {
+    constructor() {
+        this.files = [];
+        this.quality = 0.8;
+    }
+    
+    handleFileSelect(e) {
+        const files = e.target.files;
+        this.files.push(...files);
+    }
+    
+    async convertFile(file) {
+        const canvas = document.createElement('canvas');
+        // Simple conversion
+        canvas.toBlob(blob => {
+            // Download blob
+        }, 'image/webp', this.quality);
     }
 }`,
-                new: `// New JS - multiple modes with aspect ratio
-this.conversionMode = 'webp';
-this.maintainAspectRatio = true;
-this.targetWidth = 1920;
-this.targetHeight = 1080;
-this.fileTransforms = new Map();
-
-handleModeChange(e) {
-    this.conversionMode = e.target.value;
+                new: `// NEW VERSION - Advanced Features
+class ImageConverter {
+    constructor() {
+        this.files = [];
+        this.quality = 0.8;
+        this.conversionMode = 'webp'; // NEW: webp/resize/both
+        this.targetWidth = 1920; // NEW
+        this.targetHeight = 1080; // NEW
+        this.maintainAspectRatio = true; // NEW
+        this.fileTransforms = new Map(); // NEW: Individual transforms
+        this.history = this.loadHistory(); // NEW
+        this.presets = this.loadPresets(); // NEW
+        this.urlList = []; // NEW
+    }
     
-    if (this.conversionMode === 'webp') {
-        this.qualitySection.classList.remove('d-none');
-        this.resizeSection.classList.add('d-none');
-    } else if (this.conversionMode === 'resize') {
-        this.qualitySection.classList.add('d-none');
-        this.resizeSection.classList.remove('d-none');
-    } else {
-        // Show both
-        this.qualitySection.classList.remove('d-none');
-        this.resizeSection.classList.remove('d-none');
+    // NEW: Conversion Mode Handling
+    handleModeChange(e) {
+        this.conversionMode = e.target.value;
+        
+        if (this.conversionMode === 'webp') {
+            this.qualitySection.classList.remove('d-none');
+            this.resizeSection.classList.add('d-none');
+        } else if (this.conversionMode === 'resize') {
+            this.qualitySection.classList.add('d-none');
+            this.resizeSection.classList.remove('d-none');
+        } else {
+            // Both sections visible
+            this.qualitySection.classList.remove('d-none');
+            this.resizeSection.classList.remove('d-none');
+        }
     }
-}
-
-toggleAspectRatio() {
-    this.maintainAspectRatio = !this.maintainAspectRatio;
     
-    if (this.maintainAspectRatio) {
-        this.heightInput.disabled = true;
-        // Auto-calculate height
-    } else {
-        this.heightInput.disabled = false;
-        // Manual dimensions
+    // NEW: Aspect Ratio Toggle
+    toggleAspectRatio() {
+        this.maintainAspectRatio = !this.maintainAspectRatio;
+        
+        if (this.maintainAspectRatio) {
+            this.heightInput.disabled = true;
+            // Auto-calculate height
+        } else {
+            this.heightInput.disabled = false;
+        }
     }
-}
-
-handleWidthChange(e) {
-    this.targetWidth = parseInt(e.target.value);
-    if (this.maintainAspectRatio) {
-        // Calculate height based on aspect ratio
-        const aspectRatio = height / width;
-        this.targetHeight = Math.round(this.targetWidth * aspectRatio);
-        this.heightInput.value = this.targetHeight;
-    }
-}
-
-// Individual file transformations
-applyIndividualTool(fileId, tool) {
-    const transforms = this.fileTransforms.get(fileId);
     
-    switch(tool) {
-        case 'rotate':
-            transforms.rotate = (transforms.rotate + 90) % 360;
-            break;
-        case 'flipH':
-            transforms.flipH = !transforms.flipH;
-            break;
-        case 'flipV':
-            transforms.flipV = !transforms.flipV;
-            break;
+    // NEW: Width Change Handler
+    handleWidthChange(e) {
+        this.targetWidth = parseInt(e.target.value);
+        
+        if (this.maintainAspectRatio && this.files.length > 0) {
+            const firstFile = this.files[0];
+            const [width, height] = firstFile.originalDimensions.split('x');
+            const aspectRatio = height / width;
+            this.targetHeight = Math.round(this.targetWidth * aspectRatio);
+            this.heightInput.value = this.targetHeight;
+        }
     }
-}
-
-// Preset system
-savePreset() {
-    const preset = {
-        name, conversionMode, quality,
-        targetWidth, targetHeight,
-        maintainAspectRatio,
-        renamePrefix, preserveExif
-    };
-    this.presets.push(preset);
-    localStorage.setItem('converterPresets', JSON.stringify(this.presets));
-}
-
-applyPreset(presetId) {
-    const preset = this.presets.find(p => p.id === presetId);
-    // Apply all settings
-    this.conversionMode = preset.conversionMode;
-    this.quality = preset.quality;
-    this.targetWidth = preset.targetWidth;
-    this.targetHeight = preset.targetHeight;
-    this.maintainAspectRatio = preset.maintainAspectRatio;
-}
-
-// Reopen preview functionality
-togglePreviewPanel() {
-    if (this.livePreviewPanel.classList.contains('d-none')) {
-        this.livePreviewPanel.classList.remove('d-none');
-        this.reopenPreviewBtn.classList.add('d-none');
-    } else {
-        this.livePreviewPanel.classList.add('d-none');
-        this.reopenPreviewBtn.classList.remove('d-none');
+    
+    // NEW: Individual Image Tools
+    applyIndividualTool(fileId, tool) {
+        const transforms = this.fileTransforms.get(fileId);
+        
+        switch(tool) {
+            case 'rotate':
+                transforms.rotate = (transforms.rotate + 90) % 360;
+                break;
+            case 'flipH':
+                transforms.flipH = !transforms.flipH;
+                break;
+            case 'flipV':
+                transforms.flipV = !transforms.flipV;
+                break;
+            case 'background':
+                transforms.background = transforms.background === 'white' ? null : 'white';
+                break;
+        }
+        
+        this.renderFileList();
+        this.updateLivePreview(); // Update preview in real-time
+    }
+    
+    // NEW: Reset Transforms
+    resetFileTransforms(fileId) {
+        const transforms = this.fileTransforms.get(fileId);
+        transforms.rotate = 0;
+        transforms.flipH = false;
+        transforms.flipV = false;
+        transforms.background = null;
+        
+        this.renderFileList();
+        this.updateLivePreview();
+    }
+    
+    // NEW: Live Preview with Transforms
+    async updateLivePreview() {
+        const previewsHTML = await Promise.all(
+            this.files.slice(0, 10).map(async (fileObj) => {
+                const originalUrl = await this.fileToDataUrl(fileObj.file);
+                const previewUrl = await this.generatePreviewWithTransforms(fileObj);
+                
+                return \`
+                    <div class="preview-item-card">
+                        <div class="preview-images">
+                            <img src="\${originalUrl}" alt="Original">
+                            <img src="\${previewUrl}" alt="With Transforms">
+                        </div>
+                    </div>
+                \`;
+            })
+        );
+        
+        this.previewPanelContent.innerHTML = previewsHTML.join('');
+    }
+    
+    // NEW: Generate Preview with Transforms
+    async generatePreviewWithTransforms(fileObj) {
+        const transforms = this.fileTransforms.get(fileObj.id);
+        
+        return new Promise(async (resolve) => {
+            const img = new Image();
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            img.onload = () => {
+                // Apply rotation
+                if (transforms.rotate === 90 || transforms.rotate === 270) {
+                    canvas.width = img.height;
+                    canvas.height = img.width;
+                } else {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                }
+                
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(transforms.rotate * Math.PI / 180);
+                if (transforms.flipH) ctx.scale(-1, 1);
+                if (transforms.flipV) ctx.scale(1, -1);
+                
+                if (transforms.background === 'white') {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(-img.width / 2, -img.height / 2, img.width, img.height);
+                }
+                
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                ctx.restore();
+                
+                resolve(canvas.toDataURL());
+            };
+            
+            img.src = await this.fileToDataUrl(fileObj.file);
+        });
+    }
+    
+    // NEW: Enhanced Conversion
+    async convertFile(fileObj, index) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        // Load image
+        img.src = await this.fileToDataUrl(fileObj.file);
+        await new Promise(resolve => img.onload = resolve);
+        
+        // Store original dimensions
+        fileObj.originalDimensions = \`\${img.width}x\${img.height}\`;
+        
+        // Calculate target dimensions
+        let canvasWidth = img.width;
+        let canvasHeight = img.height;
+        
+        const shouldResize = this.conversionMode === 'resize' || this.conversionMode === 'both';
+        
+        if (shouldResize) {
+            if (this.maintainAspectRatio) {
+                if (img.width > this.targetWidth) {
+                    const aspectRatio = img.height / img.width;
+                    canvasWidth = this.targetWidth;
+                    canvasHeight = Math.round(this.targetWidth * aspectRatio);
+                }
+            } else {
+                canvasWidth = this.targetWidth;
+                canvasHeight = this.targetHeight;
+            }
+        }
+        
+        // Apply transforms
+        const transforms = this.fileTransforms.get(fileObj.id);
+        
+        if (transforms.rotate === 90 || transforms.rotate === 270) {
+            canvas.width = canvasHeight;
+            canvas.height = canvasWidth;
+        } else {
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+        }
+        
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(transforms.rotate * Math.PI / 180);
+        if (transforms.flipH) ctx.scale(-1, 1);
+        if (transforms.flipV) ctx.scale(1, -1);
+        
+        if (transforms.background === 'white') {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
+        }
+        
+        ctx.drawImage(img, -canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
+        ctx.restore();
+        
+        // Convert to blob
+        const shouldConvertToWebP = this.conversionMode === 'webp' || this.conversionMode === 'both';
+        const mimeType = shouldConvertToWebP ? 'image/webp' : fileObj.file.type;
+        const quality = shouldConvertToWebP ? this.quality : 0.92;
+        
+        await new Promise(resolve => {
+            canvas.toBlob(blob => {
+                fileObj.convertedBlob = blob;
+                fileObj.convertedSize = blob.size;
+                fileObj.savings = Math.round(((fileObj.size - blob.size) / fileObj.size) * 100);
+                fileObj.status = 'completed';
+                resolve();
+            }, mimeType, quality);
+        });
+    }
+    
+    // NEW: URL Upload
+    async addUrlToList() {
+        const url = this.urlInput.value.trim();
+        if (!url) return;
+        
+        this.urlList.push(url);
+        await this.downloadImageFromUrl(url);
+    }
+    
+    async downloadImageFromUrl(url) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const file = new File([blob], url.split('/').pop(), { type: blob.type });
+        this.addFiles([file]);
+    }
+    
+    // NEW: Preset System
+    savePreset() {
+        const preset = {
+            id: Date.now(),
+            name: this.presetNameInput.value,
+            conversionMode: this.conversionMode,
+            quality: this.quality,
+            targetWidth: this.targetWidth,
+            targetHeight: this.targetHeight,
+            maintainAspectRatio: this.maintainAspectRatio
+        };
+        
+        this.presets.push(preset);
+        localStorage.setItem('converterPresets', JSON.stringify(this.presets));
+    }
+    
+    applyPreset(presetId) {
+        const preset = this.presets.find(p => p.id === presetId);
+        this.conversionMode = preset.conversionMode;
+        this.quality = preset.quality;
+        this.targetWidth = preset.targetWidth;
+        this.targetHeight = preset.targetHeight;
+        this.maintainAspectRatio = preset.maintainAspectRatio;
+        
+        // Update UI
+        this.handleModeChange({ target: { value: preset.conversionMode } });
+    }
+    
+    // NEW: History Management
+    saveToHistory() {
+        const historyItem = {
+            date: new Date().toISOString(),
+            fileCount: this.files.length,
+            totalSavings: this.calculateTotalSavings(),
+            originalSize: this.totalOriginalSize,
+            convertedSize: this.totalConvertedSize
+        };
+        
+        this.history.unshift(historyItem);
+        localStorage.setItem('converterHistory', JSON.stringify(this.history));
+    }
+    
+    // NEW: Duplicate Detector
+    async scanForDuplicates() {
+        const duplicates = [];
+        const seen = new Map();
+        
+        for (const file of this.files) {
+            const key = \`\${file.name}-\${file.size}\`;
+            if (seen.has(key)) {
+                duplicates.push(file);
+            } else {
+                seen.set(key, file);
+            }
+        }
+        
+        return duplicates;
     }
 }`
             }
@@ -1494,7 +2176,7 @@ togglePreviewPanel() {
 
     renderHistory() {
         if (this.history.length === 0) {
-            this.historyList.innerHTML = '<p class="text-center text-muted">No conversion history yet. Start converting images!</p>';
+            this.historyList.innerHTML = '<p class="text-center text-muted-white">No conversion history yet. Start converting images!</p>';
             return;
         }
         
