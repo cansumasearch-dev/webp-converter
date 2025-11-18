@@ -866,11 +866,22 @@ class ImageConverter {
 
     getFinalFileName(fileObj, index) {
         if (this.renamePrefix) {
-            const ext = this.conversionMode === 'resize' ? fileObj.name.split('.').pop() : 'webp';
+            // Determine extension based on mode and original file
+            let ext;
+            if (this.conversionMode === 'webp' || this.conversionMode === 'both') {
+                ext = 'webp';
+            } else if (fileObj.file.type === 'image/svg+xml') {
+                ext = 'png'; // SVG becomes PNG in resize mode
+            } else {
+                ext = fileObj.name.split('.').pop();
+            }
             return `${this.renamePrefix}_${index + 1}.${ext}`;
         } else {
             if (fileObj.convertedToWebP) {
-                return fileObj.name.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+                return fileObj.name.replace(/\.(jpg|jpeg|png|svg)$/i, '.webp');
+            } else if (fileObj.file.type === 'image/svg+xml' && this.conversionMode === 'resize') {
+                // SVG in resize mode becomes PNG
+                return fileObj.name.replace(/\.svg$/i, '.png');
             }
             return fileObj.name;
         }
@@ -1019,8 +1030,25 @@ class ImageConverter {
             ctx.restore();
             
             const shouldConvertToWebP = this.conversionMode === 'webp' || this.conversionMode === 'both';
-            const mimeType = shouldConvertToWebP ? 'image/webp' : fileObj.file.type;
-            const quality = shouldConvertToWebP ? this.quality : 0.92;
+
+            // Determine output format
+            let mimeType, quality;
+            if (shouldConvertToWebP) {
+                // Convert to WebP
+                mimeType = 'image/webp';
+                quality = this.quality;
+            } else {
+                // Resize only mode - but SVG can't be output from canvas
+                if (fileObj.file.type === 'image/svg+xml') {
+                    // SVG must become PNG when resizing (canvas limitation)
+                    mimeType = 'image/png';
+                    quality = 1.0; // Max quality for PNG
+                } else {
+                    // Keep original format (JPEG/PNG)
+                    mimeType = fileObj.file.type;
+                    quality = 0.92;
+                }
+}
             
             await new Promise(resolve => {
                 canvas.toBlob(blob => {
