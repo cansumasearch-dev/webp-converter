@@ -531,7 +531,7 @@ class ImageConverter {
         e.preventDefault();
         this.uploadZone.classList.remove('dragover');
         const files = Array.from(e.dataTransfer.files).filter(file => 
-            ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)
+            ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'].includes(file.type)
         );
         this.addFiles(files);
     }
