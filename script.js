@@ -23,6 +23,9 @@ class ImageConverter {
         this.pagespeedApiKey = 'AIzaSyAnhmyxMHIsJdvyka_SgD4KHltFL9g7WPg';
         this.previousPageSpeedResults = this.loadPreviousPageSpeed();
         this.currentPageSpeedData = null;
+
+        // NEW: track if PageSpeed is currently analyzing
+        this.isAnalyzingPageSpeed = false;
         
         this.initializeElements();
         this.bindEvents();
@@ -241,7 +244,7 @@ class ImageConverter {
             });
         }
         
-        // PageSpeed events - FIXED DEVICE TOGGLE
+        // PageSpeed events
         if (this.analyzePageSpeedBtn) {
             this.analyzePageSpeedBtn.addEventListener('click', () => this.analyzePageSpeed());
         }
@@ -254,15 +257,29 @@ class ImageConverter {
             });
         }
         
-        // FIXED: Device toggle buttons
+        // ✅ FIXED: Device toggle buttons now auto-run PageSpeed on click
         if (this.deviceBtns) {
             this.deviceBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
+
+                    // Don't start a new run while one is in progress
+                    if (this.isAnalyzingPageSpeed) {
+                        return;
+                    }
+
+                    // Toggle active button styling
                     this.deviceBtns.forEach(b => b.classList.remove('active'));
                     e.currentTarget.classList.add('active');
+
+                    // Update strategy (mobile/desktop)
                     this.pagespeedStrategy = e.currentTarget.getAttribute('data-strategy');
                     console.log('Strategy changed to:', this.pagespeedStrategy);
+
+                    // If we already have a URL, auto-run analysis
+                    if (this.pagespeedUrl && this.pagespeedUrl.value.trim()) {
+                        this.analyzePageSpeed();
+                    }
                 });
             });
         }
@@ -278,6 +295,7 @@ class ImageConverter {
             }
         });
     }
+
 
     // Notification System
     initializeNotifications() {
@@ -1462,6 +1480,9 @@ class ImageConverter {
 
     async analyzePageSpeed() {
         if (!this.pagespeedUrl) return;
+
+        // Avoid double-runs if the user clicks very fast
+        if (this.isAnalyzingPageSpeed) return;
         
         const url = this.pagespeedUrl.value.trim();
         
@@ -1477,6 +1498,9 @@ class ImageConverter {
             return;
         }
         
+        // Mark as analyzing
+        this.isAnalyzingPageSpeed = true;
+        
         // IMPORTANT: Log the current strategy
         console.log('🔍 Analyzing with strategy:', this.pagespeedStrategy);
         
@@ -1488,7 +1512,7 @@ class ImageConverter {
         try {
             const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
             
-            // FIXED: Make sure strategy is correctly passed
+            // Make sure strategy is correctly passed
             let apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${this.pagespeedStrategy}&key=${this.pagespeedApiKey}`;
             
             categories.forEach(cat => {
@@ -1515,7 +1539,7 @@ class ImageConverter {
             // Store current results with strategy info
             this.currentPageSpeedData = {
                 url: url,
-                strategy: this.pagespeedStrategy, // Make sure this is saved
+                strategy: this.pagespeedStrategy,
                 timestamp: new Date().toISOString(),
                 scores: {
                     performance: data.lighthouseResult.categories.performance?.score ? Math.round(data.lighthouseResult.categories.performance.score * 100) : 0,
@@ -1557,11 +1581,14 @@ class ImageConverter {
             `;
             this.pagespeedResults.classList.remove('d-none');
         } finally {
+            // Reset loading state
             this.pagespeedLoading.classList.add('d-none');
             this.analyzePageSpeedBtn.disabled = false;
             this.analyzePageSpeedBtn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze';
+            this.isAnalyzingPageSpeed = false;
         }
     }
+
 
     // NEW: Updated color scheme
     getScoreClass(score) {
@@ -1644,7 +1671,7 @@ class ImageConverter {
                         ${deviceIcon} ${deviceName} Performance
                     </h3>
                     <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin: 0.5rem 0 0 0;">
-                        Switch device type above and click "Analyze" again to compare
+                        Switch device type above again to analyze
                     </p>
                 </div>
                 
