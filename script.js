@@ -18,9 +18,11 @@ class ImageConverter {
         // Individual file transformations
         this.fileTransforms = new Map();
         
-        // PageSpeed properties with YOUR API key
+        // PageSpeed properties
         this.pagespeedStrategy = 'mobile';
         this.pagespeedApiKey = 'AIzaSyAnhmyxMHIsJdvyka_SgD4KHltFL9g7WPg';
+        this.previousPageSpeedResults = this.loadPreviousPageSpeed();
+        this.currentPageSpeedData = null;
         
         this.initializeElements();
         this.bindEvents();
@@ -239,7 +241,7 @@ class ImageConverter {
             });
         }
         
-        // PageSpeed events
+        // PageSpeed events - FIXED DEVICE TOGGLE
         if (this.analyzePageSpeedBtn) {
             this.analyzePageSpeedBtn.addEventListener('click', () => this.analyzePageSpeed());
         }
@@ -252,12 +254,15 @@ class ImageConverter {
             });
         }
         
+        // FIXED: Device toggle buttons
         if (this.deviceBtns) {
             this.deviceBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
+                    e.preventDefault();
                     this.deviceBtns.forEach(b => b.classList.remove('active'));
                     e.currentTarget.classList.add('active');
                     this.pagespeedStrategy = e.currentTarget.getAttribute('data-strategy');
+                    console.log('Strategy changed to:', this.pagespeedStrategy);
                 });
             });
         }
@@ -274,7 +279,44 @@ class ImageConverter {
         });
     }
 
-    // Sidebar methods
+    // Notification System
+    initializeNotifications() {
+        const notificationCenter = document.getElementById('notificationsCenter');
+        const closeNotificationBtn = document.getElementById('closeNotification');
+        const reopenNotificationBtn = document.getElementById('reopenNotification');
+        
+        if (!notificationCenter || !closeNotificationBtn || !reopenNotificationBtn) return;
+        
+        const notificationClosed = localStorage.getItem('notificationClosed');
+        
+        setTimeout(() => {
+            if (!notificationClosed) {
+                notificationCenter.classList.add('active');
+            } else {
+                reopenNotificationBtn.classList.add('visible');
+            }
+        }, 500);
+        
+        closeNotificationBtn.addEventListener('click', () => {
+            notificationCenter.classList.add('closing');
+            
+            setTimeout(() => {
+                notificationCenter.classList.remove('active', 'closing');
+                reopenNotificationBtn.classList.add('visible');
+                localStorage.setItem('notificationClosed', 'true');
+            }, 500);
+        });
+        
+        reopenNotificationBtn.addEventListener('click', () => {
+            reopenNotificationBtn.classList.remove('visible');
+            
+            setTimeout(() => {
+                notificationCenter.classList.add('active');
+                localStorage.removeItem('notificationClosed');
+            }, 100);
+        });
+    }
+
     toggleSidebar() {
         this.sidebar.classList.toggle('active');
         this.sidebarOverlay.classList.toggle('active');
@@ -299,52 +341,6 @@ class ImageConverter {
         this.sidebarSpaceSaved.textContent = this.formatFileSize(totalSaved);
     }
 
-    initializeNotifications() {
-        const notificationCenter = document.getElementById('notificationsCenter');
-        const closeNotificationBtn = document.getElementById('closeNotification');
-        const reopenNotificationBtn = document.getElementById('reopenNotification');
-        
-        if (!notificationCenter || !closeNotificationBtn || !reopenNotificationBtn) return;
-        
-        // Check if notification was previously closed
-        const notificationClosed = localStorage.getItem('notificationClosed');
-        
-        // Show notification on page load (after small delay for better effect)
-        setTimeout(() => {
-            if (!notificationClosed) {
-                notificationCenter.classList.add('active');
-            } else {
-                reopenNotificationBtn.classList.add('visible');
-            }
-        }, 500);
-        
-        // Close notification
-        closeNotificationBtn.addEventListener('click', () => {
-            notificationCenter.classList.add('closing');
-            
-            setTimeout(() => {
-                notificationCenter.classList.remove('active', 'closing');
-                reopenNotificationBtn.classList.add('visible');
-                
-                // Remember that user closed it
-                localStorage.setItem('notificationClosed', 'true');
-            }, 500);
-        });
-        
-        // Reopen notification
-        reopenNotificationBtn.addEventListener('click', () => {
-            reopenNotificationBtn.classList.remove('visible');
-            
-            setTimeout(() => {
-                notificationCenter.classList.add('active');
-                
-                // Remove the "closed" flag
-                localStorage.removeItem('notificationClosed');
-            }, 100);
-        });
-    }
-
-    // Conversion mode handling
     handleModeChange(e) {
         this.conversionMode = e.target.value;
         
@@ -1451,7 +1447,19 @@ class ImageConverter {
         this.renderPresets();
     }
 
-    // PageSpeed Insights Methods - WITH YOUR API KEY
+    // ===========================================
+    // PAGESPEED INSIGHTS - WITH ALL NEW FEATURES
+    // ===========================================
+
+    loadPreviousPageSpeed() {
+        const stored = localStorage.getItem('previousPageSpeed');
+        return stored ? JSON.parse(stored) : null;
+    }
+
+    savePreviousPageSpeed(data) {
+        localStorage.setItem('previousPageSpeed', JSON.stringify(data));
+    }
+
     async analyzePageSpeed() {
         if (!this.pagespeedUrl) return;
         
@@ -1469,27 +1477,32 @@ class ImageConverter {
             return;
         }
         
+        // IMPORTANT: Log the current strategy
+        console.log('🔍 Analyzing with strategy:', this.pagespeedStrategy);
+        
         this.pagespeedLoading.classList.remove('d-none');
         this.pagespeedResults.classList.add('d-none');
         this.analyzePageSpeedBtn.disabled = true;
-        this.analyzePageSpeedBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+        this.analyzePageSpeedBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Analyzing ${this.pagespeedStrategy === 'mobile' ? 'Mobile' : 'Desktop'}...`;
         
         try {
-            // Categories to analyze
             const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
+            
+            // FIXED: Make sure strategy is correctly passed
             let apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${this.pagespeedStrategy}&key=${this.pagespeedApiKey}`;
             
-            // Add categories to request
             categories.forEach(cat => {
                 apiUrl += `&category=${cat}`;
             });
             
-            console.log('Fetching PageSpeed data for:', url);
+            console.log('📡 API URL:', apiUrl);
+            console.log('📱 Strategy in URL:', this.pagespeedStrategy);
             
             const response = await fetch(apiUrl);
             const data = await response.json();
             
-            console.log('PageSpeed response:', data);
+            console.log('✅ PageSpeed response received');
+            console.log('📊 Strategy from API:', data.lighthouseResult?.configSettings?.formFactor);
             
             if (data.error) {
                 throw new Error(data.error.message || 'Failed to analyze URL');
@@ -1499,32 +1512,35 @@ class ImageConverter {
                 throw new Error('No lighthouse results in response');
             }
             
+            // Store current results with strategy info
+            this.currentPageSpeedData = {
+                url: url,
+                strategy: this.pagespeedStrategy, // Make sure this is saved
+                timestamp: new Date().toISOString(),
+                scores: {
+                    performance: data.lighthouseResult.categories.performance?.score ? Math.round(data.lighthouseResult.categories.performance.score * 100) : 0,
+                    accessibility: data.lighthouseResult.categories.accessibility?.score ? Math.round(data.lighthouseResult.categories.accessibility.score * 100) : 0,
+                    bestPractices: data.lighthouseResult.categories['best-practices']?.score ? Math.round(data.lighthouseResult.categories['best-practices'].score * 100) : 0,
+                    seo: data.lighthouseResult.categories.seo?.score ? Math.round(data.lighthouseResult.categories.seo.score * 100) : 0
+                },
+                audits: data.lighthouseResult.audits
+            };
+            
             this.displayPageSpeedResults(data);
             
         } catch (error) {
-            console.error('PageSpeed error:', error);
+            console.error('❌ PageSpeed error:', error);
             
             let errorMessage = error.message;
-            let troubleshooting = '';
-            
-            // Provide helpful troubleshooting based on error type
-            if (errorMessage.includes('CORS')) {
-                troubleshooting = '<p style="color: #666;">This appears to be a CORS issue. The API should work correctly.</p>';
-            } else if (errorMessage.includes('Failed to fetch')) {
-                troubleshooting = '<p style="color: #666;">Network error. Please check your internet connection.</p>';
-            } else if (errorMessage.includes('Invalid response')) {
-                troubleshooting = '<p style="color: #666;">The URL might not be publicly accessible or might have blocked the PageSpeed bot.</p>';
-            }
             
             this.pagespeedResults.innerHTML = `
                 <div class="metrics-section">
-                    <h3><i class="fas fa-exclamation-triangle me-2"></i>Analysis Error</h3>
-                    <p style="color: #dc3545; text-align: center; font-weight: 600;">${errorMessage}</p>
-                    ${troubleshooting}
+                    <h3 style="color: white;"><i class="fas fa-exclamation-triangle me-2"></i>Analysis Error</h3>
+                    <p style="color: #ff6b6b; text-align: center; font-weight: 600;">${errorMessage}</p>
                     
-                    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-                        <h4 style="font-size: 1rem; margin-bottom: 0.5rem;">Troubleshooting Tips:</h4>
-                        <ul style="text-align: left; color: #666; line-height: 1.8;">
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                        <h4 style="font-size: 1rem; margin-bottom: 0.5rem; color: white;">Troubleshooting Tips:</h4>
+                        <ul style="text-align: left; color: rgba(255, 255, 255, 0.8); line-height: 1.8;">
                             <li>Make sure the URL is publicly accessible (not behind a login)</li>
                             <li>Try with "https://" instead of "http://"</li>
                             <li>Verify the website is online and responding</li>
@@ -1532,7 +1548,7 @@ class ImageConverter {
                         </ul>
                     </div>
                     
-                    <div style="text-align: center; margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center;">
+                    <div style="text-align: center; margin-top: 1.5rem;">
                         <a href="https://pagespeed.web.dev/analysis?url=${encodeURIComponent(url)}" target="_blank" class="btn-custom" style="text-decoration: none; padding: 0.8rem 1.5rem; display: inline-block;">
                             <i class="fas fa-external-link-alt me-2"></i>Try on PageSpeed.web.dev
                         </a>
@@ -1547,6 +1563,37 @@ class ImageConverter {
         }
     }
 
+    // NEW: Updated color scheme
+    getScoreClass(score) {
+        if (score === 100) return 'perfect'; // Gold
+        if (score >= 90) return 'good';       // Green
+        if (score >= 50) return 'average';    // Orange
+        return 'poor';                         // Red
+    }
+
+    getMetricClass(score) {
+        if (score >= 0.9) return 'good';
+        if (score >= 0.5) return 'average';
+        return 'poor';
+    }
+
+    // NEW: Calculate score difference
+    getScoreDifference(category) {
+        if (!this.previousPageSpeedResults || !this.currentPageSpeedData) return null;
+        
+        const prev = this.previousPageSpeedResults.scores[category];
+        const curr = this.currentPageSpeedData.scores[category];
+        
+        if (prev === undefined || curr === undefined) return null;
+        
+        const diff = curr - prev;
+        return {
+            value: diff,
+            increased: diff > 0,
+            decreased: diff < 0
+        };
+    }
+
     displayPageSpeedResults(data) {
         try {
             const lighthouse = data.lighthouseResult;
@@ -1558,46 +1605,88 @@ class ImageConverter {
             const categories = lighthouse.categories;
             const audits = lighthouse.audits;
             
-            // Safely get scores with fallbacks
             const performanceScore = categories.performance?.score ? Math.round(categories.performance.score * 100) : 0;
             const accessibilityScore = categories.accessibility?.score ? Math.round(categories.accessibility.score * 100) : 0;
             const bestPracticesScore = categories['best-practices']?.score ? Math.round(categories['best-practices'].score * 100) : 0;
             const seoScore = categories.seo?.score ? Math.round(categories.seo.score * 100) : 0;
             
-            // Safely get metrics with fallbacks
             const fcp = audits['first-contentful-paint']?.displayValue || 'N/A';
             const lcp = audits['largest-contentful-paint']?.displayValue || 'N/A';
             const tbt = audits['total-blocking-time']?.displayValue || 'N/A';
             const cls = audits['cumulative-layout-shift']?.displayValue || 'N/A';
             const si = audits['speed-index']?.displayValue || 'N/A';
             
-            // Safely get opportunities
             const opportunities = audits ? Object.values(audits)
                 .filter(audit => audit && audit.details && audit.details.type === 'opportunity' && audit.score !== null && audit.score < 1)
                 .sort((a, b) => (b.details?.overallSavingsMs || 0) - (a.details?.overallSavingsMs || 0))
                 .slice(0, 5) : [];
             
+            const perfDiff = this.getScoreDifference('performance');
+            const accDiff = this.getScoreDifference('accessibility');
+            const bpDiff = this.getScoreDifference('bestPractices');
+            const seoDiff = this.getScoreDifference('seo');
+            
+            const comparisonBadge = (diff) => {
+                if (!diff || diff.value === 0) return '';
+                const sign = diff.increased ? '+' : '';
+                const color = diff.increased ? '#10b981' : '#ef4444';
+                return `<div class="score-change" style="background: ${color};">${sign}${diff.value}</div>`;
+            };
+            
+            // Get device emoji
+            const deviceIcon = this.pagespeedStrategy === 'mobile' ? '📱' : '🖥️';
+            const deviceName = this.pagespeedStrategy === 'mobile' ? 'Mobile' : 'Desktop';
+            
             const html = `
+                <!-- Device Indicator -->
+                <div class="device-indicator" style="text-align: center; margin-bottom: 2rem; padding: 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 12px;">
+                    <h3 style="color: white; font-size: 1.3rem; margin: 0;">
+                        ${deviceIcon} ${deviceName} Performance
+                    </h3>
+                    <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                        Switch device type above and click "Analyze" again to compare
+                    </p>
+                </div>
+                
+                <!-- Action Buttons Row -->
+                <div class="pagespeed-actions">
+                    ${this.previousPageSpeedResults ? `
+                        <button class="btn-action" onclick="converter.showComparison()">
+                            <i class="fas fa-history me-2"></i>Compare with Previous
+                        </button>
+                    ` : ''}
+                    <button class="btn-action" onclick="converter.showOptimizationTips('octobercms')">
+                        <i class="fab fa-laravel me-2"></i>OctoberCMS Tips
+                    </button>
+                    <button class="btn-action" onclick="converter.showOptimizationTips('wordpress')">
+                        <i class="fab fa-wordpress me-2"></i>WordPress Tips
+                    </button>
+                </div>
+                
                 <div class="score-summary">
                     <div class="score-card">
+                        ${comparisonBadge(perfDiff)}
                         <div class="score-label">Performance</div>
                         <div class="score-circle ${this.getScoreClass(performanceScore)}">
                             ${performanceScore}
                         </div>
                     </div>
                     <div class="score-card">
+                        ${comparisonBadge(accDiff)}
                         <div class="score-label">Accessibility</div>
                         <div class="score-circle ${this.getScoreClass(accessibilityScore)}">
                             ${accessibilityScore}
                         </div>
                     </div>
                     <div class="score-card">
+                        ${comparisonBadge(bpDiff)}
                         <div class="score-label">Best Practices</div>
                         <div class="score-circle ${this.getScoreClass(bestPracticesScore)}">
                             ${bestPracticesScore}
                         </div>
                     </div>
                     <div class="score-card">
+                        ${comparisonBadge(seoDiff)}
                         <div class="score-label">SEO</div>
                         <div class="score-circle ${this.getScoreClass(seoScore)}">
                             ${seoScore}
@@ -1606,39 +1695,39 @@ class ImageConverter {
                 </div>
                 
                 <div class="metrics-section">
-                    <h3><i class="fas fa-clock me-2"></i>Core Web Vitals</h3>
+                    <h3 style="color: white;"><i class="fas fa-clock me-2"></i>Core Web Vitals</h3>
                     <div class="metric-item">
                         <div class="metric-name">
-                            <strong>First Contentful Paint (FCP)</strong>
-                            <div style="font-size: 0.85rem; color: #666;">Measures when content first appears</div>
+                            <strong style="color: white;">First Contentful Paint (FCP)</strong>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Measures when content first appears</div>
                         </div>
                         <div class="metric-value ${audits['first-contentful-paint']?.score ? this.getMetricClass(audits['first-contentful-paint'].score) : 'average'}">${fcp}</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-name">
-                            <strong>Largest Contentful Paint (LCP)</strong>
-                            <div style="font-size: 0.85rem; color: #666;">Measures loading performance</div>
+                            <strong style="color: white;">Largest Contentful Paint (LCP)</strong>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Measures loading performance</div>
                         </div>
                         <div class="metric-value ${audits['largest-contentful-paint']?.score ? this.getMetricClass(audits['largest-contentful-paint'].score) : 'average'}">${lcp}</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-name">
-                            <strong>Total Blocking Time (TBT)</strong>
-                            <div style="font-size: 0.85rem; color: #666;">Measures interactivity</div>
+                            <strong style="color: white;">Total Blocking Time (TBT)</strong>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Measures interactivity</div>
                         </div>
                         <div class="metric-value ${audits['total-blocking-time']?.score ? this.getMetricClass(audits['total-blocking-time'].score) : 'average'}">${tbt}</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-name">
-                            <strong>Cumulative Layout Shift (CLS)</strong>
-                            <div style="font-size: 0.85rem; color: #666;">Measures visual stability</div>
+                            <strong style="color: white;">Cumulative Layout Shift (CLS)</strong>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Measures visual stability</div>
                         </div>
                         <div class="metric-value ${audits['cumulative-layout-shift']?.score ? this.getMetricClass(audits['cumulative-layout-shift'].score) : 'average'}">${cls}</div>
                     </div>
                     <div class="metric-item">
                         <div class="metric-name">
-                            <strong>Speed Index</strong>
-                            <div style="font-size: 0.85rem; color: #666;">How quickly content is displayed</div>
+                            <strong style="color: white;">Speed Index</strong>
+                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">How quickly content is displayed</div>
                         </div>
                         <div class="metric-value ${audits['speed-index']?.score ? this.getMetricClass(audits['speed-index'].score) : 'average'}">${si}</div>
                     </div>
@@ -1646,11 +1735,11 @@ class ImageConverter {
                 
                 ${opportunities.length > 0 ? `
                     <div class="opportunities-section">
-                        <h3><i class="fas fa-lightbulb me-2"></i>Optimization Opportunities</h3>
+                        <h3 style="color: white;"><i class="fas fa-lightbulb me-2"></i>Optimization Opportunities</h3>
                         ${opportunities.map(opp => `
                             <div class="opportunity-item">
-                                <div class="opportunity-title">${opp.title || 'Optimization Available'}</div>
-                                <div class="opportunity-description">${opp.description || ''}</div>
+                                <div class="opportunity-title" style="color: white;">${opp.title || 'Optimization Available'}</div>
+                                <div class="opportunity-description" style="color: rgba(255,255,255,0.8);">${opp.description || ''}</div>
                                 ${opp.details && opp.details.overallSavingsMs ? 
                                     `<span class="opportunity-savings">
                                         <i class="fas fa-clock me-1"></i>Potential savings: ${Math.round(opp.details.overallSavingsMs / 1000)}s
@@ -1659,39 +1748,450 @@ class ImageConverter {
                             </div>
                         `).join('')}
                     </div>
-                ` : '<div class="metrics-section"><p style="text-align: center; color: #666;"><i class="fas fa-check-circle me-2"></i>No major optimization opportunities found!</p></div>'}
+                ` : '<div class="metrics-section"><p style="text-align: center; color: rgba(255,255,255,0.8);"><i class="fas fa-check-circle me-2"></i>No major optimization opportunities found!</p></div>'}
+                
+                <!-- ChatGPT Button -->
+                <div class="chatgpt-section">
+                    <button class="btn-chatgpt" onclick="converter.openChatGPT('octobercms')">
+                        <i class="fas fa-comments me-2"></i>Chat with AI about OctoberCMS Optimization
+                    </button>
+                    <button class="btn-chatgpt" onclick="converter.openChatGPT('wordpress')">
+                        <i class="fas fa-comments me-2"></i>Chat with AI about WordPress Optimization
+                    </button>
+                </div>
             `;
             
             this.pagespeedResults.innerHTML = html;
             this.pagespeedResults.classList.remove('d-none');
             
+            this.savePreviousPageSpeed(this.currentPageSpeedData);
+            this.previousPageSpeedResults = this.currentPageSpeedData;
+            
         } catch (error) {
             console.error('Error displaying PageSpeed results:', error);
             this.pagespeedResults.innerHTML = `
                 <div class="metrics-section">
-                    <h3><i class="fas fa-exclamation-triangle me-2"></i>Display Error</h3>
-                    <p style="color: #dc3545; text-align: center;">Failed to display PageSpeed results</p>
-                    <p style="text-align: center; color: #666;">The API returned data in an unexpected format.</p>
-                    <details style="margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
-                        <summary style="cursor: pointer; font-weight: 600;">Show Raw Response</summary>
-                        <pre style="margin-top: 1rem; overflow: auto; max-height: 300px; font-size: 0.8rem;">${JSON.stringify(data, null, 2)}</pre>
-                    </details>
+                    <h3 style="color: white;"><i class="fas fa-exclamation-triangle me-2"></i>Display Error</h3>
+                    <p style="color: #ff6b6b; text-align: center;">Failed to display PageSpeed results</p>
+                    <p style="text-align: center; color: rgba(255,255,255,0.8);">The API returned data in an unexpected format.</p>
                 </div>
             `;
             this.pagespeedResults.classList.remove('d-none');
         }
     }
 
-    getScoreClass(score) {
-        if (score >= 90) return 'good';
-        if (score >= 50) return 'average';
-        return 'poor';
+    // NEW: Show comparison modal
+    showComparison() {
+        if (!this.previousPageSpeedResults || !this.currentPageSpeedData) return;
+        
+        const modal = document.createElement('div');
+        modal.className = 'duplicate-modal';
+        modal.style.display = 'flex';
+        
+        const prev = this.previousPageSpeedResults;
+        const curr = this.currentPageSpeedData;
+        
+        const compareRow = (label, prevVal, currVal) => {
+            const diff = currVal - prevVal;
+            const diffClass = diff > 0 ? 'improved' : diff < 0 ? 'declined' : 'same';
+            const diffText = diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : '0';
+            
+            return `
+                <tr>
+                    <td style="color: white; font-weight: 600;">${label}</td>
+                    <td style="color: rgba(255,255,255,0.8);">${prevVal}</td>
+                    <td style="color: rgba(255,255,255,0.8);">${currVal}</td>
+                    <td class="${diffClass}">${diffText}</td>
+                </tr>
+            `;
+        };
+        
+        modal.innerHTML = `
+            <div class="duplicate-modal-content" style="max-width: 800px;">
+                <button class="close-modal">&times;</button>
+                <div class="modal-header">
+                    <h3 style="color: white;">Performance Comparison</h3>
+                    <p style="color: rgba(255,255,255,0.7);">Comparing current results with previous analysis</p>
+                </div>
+                <div style="margin-top: 2rem;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid rgba(255,255,255,0.1);">
+                                <th style="color: white; padding: 1rem; text-align: left;">Metric</th>
+                                <th style="color: white; padding: 1rem; text-align: center;">Previous</th>
+                                <th style="color: white; padding: 1rem; text-align: center;">Current</th>
+                                <th style="color: white; padding: 1rem; text-align: center;">Change</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${compareRow('Performance', prev.scores.performance, curr.scores.performance)}
+                            ${compareRow('Accessibility', prev.scores.accessibility, curr.scores.accessibility)}
+                            ${compareRow('Best Practices', prev.scores.bestPractices, curr.scores.bestPractices)}
+                            ${compareRow('SEO', prev.scores.seo, curr.scores.seo)}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
     }
 
-    getMetricClass(score) {
-        if (score >= 0.9) return 'good';
-        if (score >= 0.5) return 'average';
-        return 'poor';
+    // NEW: Show optimization tips
+    showOptimizationTips(platform) {
+        if (!this.currentPageSpeedData) {
+            alert('Please run a PageSpeed analysis first!');
+            return;
+        }
+        
+        const modal = document.createElement('div');
+        modal.className = 'duplicate-modal';
+        modal.style.display = 'flex';
+        
+        const audits = this.currentPageSpeedData.audits;
+        const opportunities = Object.values(audits)
+            .filter(audit => audit && audit.details && audit.details.type === 'opportunity' && audit.score !== null && audit.score < 1)
+            .sort((a, b) => (b.details?.overallSavingsMs || 0) - (a.details?.overallSavingsMs || 0));
+        
+        const tips = platform === 'octobercms' ? this.getOctoberCMSTips(opportunities) : this.getWordPressTips(opportunities);
+        
+        modal.innerHTML = `
+            <div class="duplicate-modal-content" style="max-width: 900px; max-height: 80vh; overflow-y: auto;">
+                <button class="close-modal">&times;</button>
+                <div class="modal-header">
+                    <h3 style="color: white;">
+                        <i class="fab fa-${platform === 'octobercms' ? 'laravel' : 'wordpress'} me-2"></i>
+                        ${platform === 'octobercms' ? 'OctoberCMS' : 'WordPress'} Optimization Tips (2025)
+                    </h3>
+                    <p style="color: rgba(255,255,255,0.7);">Best practices and plugins for your PageSpeed issues</p>
+                </div>
+                <div style="margin-top: 2rem;">
+                    ${tips}
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // NEW: OctoberCMS specific tips
+    getOctoberCMSTips(opportunities) {
+        let html = '<div class="tips-container">';
+        
+        opportunities.forEach(opp => {
+            const title = opp.title || '';
+            const description = opp.description || '';
+            
+            let tip = '';
+            
+            // Image optimization
+            if (title.toLowerCase().includes('image') || title.toLowerCase().includes('next-gen')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-image me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>OctoberCMS Solution:</strong>
+                            <ul>
+                                <li><strong>Responsiv.ImageResizer</strong> - Free plugin for automatic image resizing and optimization</li>
+                                <li><strong>WebP Support:</strong> Use <code>|resize(width, height, {format: 'webp'})</code> in Twig</li>
+                                <li><strong>Lazy Loading:</strong> Add <code>loading="lazy"</code> to image tags</li>
+                                <li><strong>Cloudflare Polish:</strong> Enable auto WebP conversion via Cloudflare</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Render-blocking resources
+            else if (title.toLowerCase().includes('render-blocking') || title.toLowerCase().includes('css') || title.toLowerCase().includes('javascript')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-code me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>OctoberCMS Solution:</strong>
+                            <ul>
+                                <li><strong>Asset Combiner:</strong> Use <code>{% styles %}</code> and <code>{% scripts %}</code> with defer</li>
+                                <li><strong>Critical CSS:</strong> Inline critical CSS in <code>{% put head %}</code></li>
+                                <li><strong>Defer JavaScript:</strong> Add <code>defer</code> or <code>async</code> to script tags</li>
+                                <li><strong>RainLab.Builder:</strong> Combine multiple CSS/JS files into one</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Caching
+            else if (title.toLowerCase().includes('cache') || title.toLowerCase().includes('browser caching')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-server me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>OctoberCMS Solution:</strong>
+                            <ul>
+                                <li><strong>Enable October Cache:</strong> Set <code>APP_ENV=production</code> in .env</li>
+                                <li><strong>Static Page Cache:</strong> Install RainLab.Pages with cache enabled</li>
+                                <li><strong>.htaccess Caching:</strong> Add browser cache headers for static files</li>
+                                <li><strong>Redis/Memcached:</strong> Configure in <code>config/cache.php</code></li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Text compression
+            else if (title.toLowerCase().includes('text compression') || title.toLowerCase().includes('gzip')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-compress me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>OctoberCMS Solution:</strong>
+                            <ul>
+                                <li><strong>Enable Gzip:</strong> Add to .htaccess:
+                                    <pre style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem;">
+AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript</pre>
+                                </li>
+                                <li><strong>Brotli Compression:</strong> Enable via server config (Nginx/Apache)</li>
+                                <li><strong>Minification:</strong> Use October's built-in asset minification</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Unused CSS/JS
+            else if (title.toLowerCase().includes('unused css') || title.toLowerCase().includes('unused javascript')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-broom me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>OctoberCMS Solution:</strong>
+                            <ul>
+                                <li><strong>Component-Based Loading:</strong> Only load CSS/JS when component is used</li>
+                                <li><strong>Conditional Loading:</strong> Use <code>{% if %}</code> to conditionally load assets</li>
+                                <li><strong>PurgeCSS:</strong> Remove unused Tailwind/Bootstrap classes</li>
+                                <li><strong>Tree Shaking:</strong> Use webpack/vite to remove unused code</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (tip) html += tip;
+        });
+        
+        // General tips always shown
+        html += `
+            <div class="tip-card general-tips">
+                <h4><i class="fas fa-star me-2"></i>General OctoberCMS Performance Tips (2025)</h4>
+                <ul>
+                    <li><strong>PHP 8.3:</strong> Upgrade to PHP 8.3 for 20-30% performance boost</li>
+                    <li><strong>OPcache:</strong> Enable OPcache in php.ini</li>
+                    <li><strong>Database Indexing:</strong> Add indexes to frequently queried columns</li>
+                    <li><strong>CDN:</strong> Use Cloudflare or BunnyCDN for static assets</li>
+                    <li><strong>Eager Loading:</strong> Use <code>->with()</code> to prevent N+1 queries</li>
+                    <li><strong>Queue Jobs:</strong> Move heavy tasks to queues</li>
+                </ul>
+            </div>
+        `;
+        
+        html += '</div>';
+        return html;
+    }
+
+    // NEW: WordPress specific tips
+    getWordPressTips(opportunities) {
+        let html = '<div class="tips-container">';
+        
+        opportunities.forEach(opp => {
+            const title = opp.title || '';
+            const description = opp.description || '';
+            
+            let tip = '';
+            
+            // Image optimization
+            if (title.toLowerCase().includes('image') || title.toLowerCase().includes('next-gen')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-image me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>WordPress Solution:</strong>
+                            <ul>
+                                <li><strong>Imagify</strong> (Free) - Auto WebP conversion and compression</li>
+                                <li><strong>ShortPixel</strong> (Free tier) - Bulk optimize existing images</li>
+                                <li><strong>Smush Pro</strong> - Lossless compression with CDN</li>
+                                <li><strong>Native Lazy Loading:</strong> WordPress 5.5+ has built-in lazy loading</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Render-blocking resources
+            else if (title.toLowerCase().includes('render-blocking') || title.toLowerCase().includes('css') || title.toLowerCase().includes('javascript')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-code me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>WordPress Solution:</strong>
+                            <ul>
+                                <li><strong>WP Rocket</strong> (Premium) - Best all-in-one, auto defer JS/CSS</li>
+                                <li><strong>Autoptimize</strong> (Free) - Combine & minify CSS/JS</li>
+                                <li><strong>Flying Scripts</strong> (Free) - Delay JavaScript execution</li>
+                                <li><strong>Asset CleanUp</strong> (Free) - Disable unused CSS/JS per page</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Caching
+            else if (title.toLowerCase().includes('cache') || title.toLowerCase().includes('browser caching')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-server me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>WordPress Solution:</strong>
+                            <ul>
+                                <li><strong>WP Rocket</strong> (Premium, $59/yr) - Best caching plugin, easy setup</li>
+                                <li><strong>W3 Total Cache</strong> (Free) - Advanced caching options</li>
+                                <li><strong>LiteSpeed Cache</strong> (Free) - For LiteSpeed servers only</li>
+                                <li><strong>Redis Object Cache</strong> (Free) - Database query caching</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Text compression
+            else if (title.toLowerCase().includes('text compression') || title.toLowerCase().includes('gzip')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-compress me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>WordPress Solution:</strong>
+                            <ul>
+                                <li><strong>WP Rocket:</strong> Enables Gzip automatically</li>
+                                <li><strong>.htaccess Method:</strong> Add Gzip rules manually</li>
+                                <li><strong>Cloudflare:</strong> Free Gzip + Brotli compression</li>
+                                <li><strong>Host-Level:</strong> Most managed hosts enable this by default</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Unused CSS/JS
+            else if (title.toLowerCase().includes('unused css') || title.toLowerCase().includes('unused javascript')) {
+                tip = `
+                    <div class="tip-card">
+                        <h4><i class="fas fa-broom me-2"></i>${title}</h4>
+                        <p class="tip-description">${description}</p>
+                        <div class="tip-solution">
+                            <strong>WordPress Solution:</strong>
+                            <ul>
+                                <li><strong>Asset CleanUp Pro</strong> ($69) - Disable CSS/JS per page/post type</li>
+                                <li><strong>Perfmatters</strong> ($29/yr) - Script manager + unused CSS removal</li>
+                                <li><strong>WP Rocket:</strong> Has unused CSS removal feature</li>
+                                <li><strong>Manual:</strong> Dequeue unused scripts in functions.php</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (tip) html += tip;
+        });
+        
+        // General tips always shown
+        html += `
+            <div class="tip-card general-tips">
+                <h4><i class="fas fa-star me-2"></i>General WordPress Performance Tips (2025)</h4>
+                <ul>
+                    <li><strong>PHP 8.3:</strong> Upgrade to PHP 8.3 for massive performance gains</li>
+                    <li><strong>Managed Hosting:</strong> Use Kinsta, WP Engine, or Cloudways</li>
+                    <li><strong>CDN:</strong> Cloudflare (Free) or BunnyCDN ($1/mo)</li>
+                    <li><strong>Database Optimization:</strong> WP-Optimize (Free) - Clean up revisions, spam</li>
+                    <li><strong>Limit Plugins:</strong> Deactivate unused plugins, quality over quantity</li>
+                    <li><strong>Theme Choice:</strong> Use lightweight themes like GeneratePress or Astra</li>
+                    <li><strong>Heartbeat Control:</strong> Limit WP Heartbeat API frequency</li>
+                </ul>
+            </div>
+        `;
+        
+        html += '</div>';
+        return html;
+    }
+
+    // NEW: Open ChatGPT with context
+    openChatGPT(platform) {
+        if (!this.currentPageSpeedData) {
+            alert('Please run a PageSpeed analysis first!');
+            return;
+        }
+        
+        const scores = this.currentPageSpeedData.scores;
+        const audits = this.currentPageSpeedData.audits;
+        
+        // Get top 5 issues
+        const issues = Object.values(audits)
+            .filter(audit => audit && audit.score !== null && audit.score < 0.9)
+            .sort((a, b) => a.score - b.score)
+            .slice(0, 5)
+            .map(audit => `- ${audit.title}: ${audit.description}`)
+            .join('\n');
+        
+        const platformName = platform === 'octobercms' ? 'OctoberCMS' : 'WordPress';
+        
+        const prompt = encodeURIComponent(`I need help optimizing my ${platformName} website's performance. Here are my current PageSpeed Insights scores:
+
+Performance: ${scores.performance}/100
+Accessibility: ${scores.accessibility}/100
+Best Practices: ${scores.bestPractices}/100
+SEO: ${scores.seo}/100
+
+Top issues identified:
+${issues}
+
+Device: ${this.currentPageSpeedData.strategy}
+URL: ${this.currentPageSpeedData.url}
+
+Can you provide specific, actionable steps to improve these scores for a ${platformName} website in 2025? Please include:
+1. Free and premium plugin recommendations
+2. Code snippets if applicable
+3. Hosting/server optimization tips
+4. Priority order (what to fix first)`);
+        
+        // Open ChatGPT with pre-filled prompt
+        window.open(`https://chat.openai.com/?q=${prompt}`, '_blank');
     }
 
     showChangelog(file) {
@@ -1713,37 +2213,49 @@ class ImageConverter {
 <!-- PageSpeed Insights Section -->
 <div class="content-section" id="pagespeedSection">
     <input type="url" id="pagespeedUrl">
-    <button class="btn-custom" id="analyzePageSpeedBtn">
-        <i class="fas fa-search me-2"></i>Analyze
-    </button>
+    <button class="btn-custom" id="analyzePageSpeedBtn">Analyze</button>
+    <!-- Comparison, Platform Tips, ChatGPT Integration -->
 </div>`
             },
             'scss': {
                 old: `// OLD VERSION
-// No PageSpeed styles`,
-                new: `// NEW VERSION
-.pagespeed-container {
-    .score-circle {
-        &.good { background: $success-gradient; }
-        &.average { background: $warning-gradient; }
-        &.poor { background: $danger-gradient; }
-    }
+// Basic PageSpeed styles`,
+                new: `// NEW VERSION - Enhanced Colors & Features
+.score-circle {
+    &.perfect { background: linear-gradient(135deg, #FFD700, #FFA500); } // Gold
+    &.good { background: linear-gradient(135deg, #10b981, #059669); }    // Green
+    &.average { background: linear-gradient(135deg, #f59e0b, #d97706); } // Orange
+    &.poor { background: linear-gradient(135deg, #ef4444, #dc2626); }    // Red
+}
+.score-change { 
+    position: absolute; 
+    top: -10px; 
+    right: -10px; 
+    width: 35px; 
+    height: 35px; 
+    border-radius: 50%; 
+    color: white; 
+    font-size: 0.9rem; 
+    font-weight: bold; 
+}
+.tip-card { 
+    background: rgba(255,255,255,0.05); 
+    padding: 1.5rem; 
+    border-radius: 12px; 
+    margin-bottom: 1.5rem; 
 }`
             },
             'js': {
-                old: `// OLD VERSION
-// No PageSpeed`,
-                new: `// NEW VERSION
-class ImageConverter {
-    constructor() {
-        this.pagespeedApiKey = 'YOUR_API_KEY';
-    }
-    
-    async analyzePageSpeed() {
-        const apiUrl = \`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=\${url}&strategy=\${this.pagespeedStrategy}&key=\${this.pagespeedApiKey}\`;
-        // Fetch and display results
-    }
-}`
+                old: `// OLD VERSION - Basic PageSpeed`,
+                new: `// NEW VERSION - Full Features
+- Fixed device toggle (mobile/desktop)
+- New color scheme (gold, green, orange, red)
+- White text for better readability
+- Comparison tracking with +/- badges
+- OctoberCMS & WordPress optimization tips
+- ChatGPT integration with context
+- Platform-specific plugin recommendations
+- 2025 best practices`
             }
         };
         
