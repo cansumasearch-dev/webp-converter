@@ -1498,10 +1498,10 @@ class ImageConverter {
             return;
         }
         
-        // Mark as analyzing
+        // Mark as analyzing so we don't spam requests
         this.isAnalyzingPageSpeed = true;
         
-        // IMPORTANT: Log the current strategy
+        // Log current strategy (mobile/desktop)
         console.log('🔍 Analyzing with strategy:', this.pagespeedStrategy);
         
         this.pagespeedLoading.classList.remove('d-none');
@@ -1510,26 +1510,20 @@ class ImageConverter {
         this.analyzePageSpeedBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Analyzing ${this.pagespeedStrategy === 'mobile' ? 'Mobile' : 'Desktop'}...`;
         
         try {
-            const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
+            // 🔥 NEW: call your Cloudflare Worker instead of Google directly
+            const workerBaseUrl = 'https://pagespeed-insights.can-akcam.workers.dev';
+            const apiUrl = `${workerBaseUrl}?url=${encodeURIComponent(url)}&strategy=${this.pagespeedStrategy}`;
             
-            // Make sure strategy is correctly passed
-            let apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${this.pagespeedStrategy}&key=${this.pagespeedApiKey}`;
-            
-            categories.forEach(cat => {
-                apiUrl += `&category=${cat}`;
-            });
-            
-            console.log('📡 API URL:', apiUrl);
-            console.log('📱 Strategy in URL:', this.pagespeedStrategy);
+            console.log('📡 Worker URL:', apiUrl);
             
             const response = await fetch(apiUrl);
             const data = await response.json();
             
-            console.log('✅ PageSpeed response received');
+            console.log('✅ PageSpeed response received from Worker');
             console.log('📊 Strategy from API:', data.lighthouseResult?.configSettings?.formFactor);
             
             if (data.error) {
-                throw new Error(data.error.message || 'Failed to analyze URL');
+                throw new Error(data.error.message || data.error || 'Failed to analyze URL');
             }
             
             if (!data.lighthouseResult) {
@@ -1553,9 +1547,9 @@ class ImageConverter {
             this.displayPageSpeedResults(data);
             
         } catch (error) {
-            console.error('❌ PageSpeed error:', error);
+            console.error('❌ PageSpeed error (via Worker):', error);
             
-            let errorMessage = error.message;
+            const errorMessage = error.message || 'Unknown error while analyzing PageSpeed';
             
             this.pagespeedResults.innerHTML = `
                 <div class="metrics-section">
@@ -1581,13 +1575,13 @@ class ImageConverter {
             `;
             this.pagespeedResults.classList.remove('d-none');
         } finally {
-            // Reset loading state
             this.pagespeedLoading.classList.add('d-none');
             this.analyzePageSpeedBtn.disabled = false;
             this.analyzePageSpeedBtn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze';
             this.isAnalyzingPageSpeed = false;
         }
     }
+
 
 
     // NEW: Updated color scheme
