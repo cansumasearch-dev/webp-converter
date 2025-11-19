@@ -18,11 +18,16 @@ class ImageConverter {
         // Individual file transformations
         this.fileTransforms = new Map();
         
+        // PageSpeed properties with YOUR API key
+        this.pagespeedStrategy = 'mobile';
+        this.pagespeedApiKey = 'AIzaSyAnhmyxMHIsJdvyka_SgD4KHltFL9g7WPg';
+        
         this.initializeElements();
         this.bindEvents();
         this.renderHistory();
         this.renderPresets();
         this.updateSidebarStats();
+        this.initializeNotifications();
     }
 
     initializeElements() {
@@ -131,6 +136,13 @@ class ImageConverter {
         this.changelogTitle = document.getElementById('changelogTitle');
         this.changelogOld = document.getElementById('changelogOld');
         this.changelogNew = document.getElementById('changelogNew');
+        
+        // PageSpeed elements
+        this.pagespeedUrl = document.getElementById('pagespeedUrl');
+        this.analyzePageSpeedBtn = document.getElementById('analyzePageSpeedBtn');
+        this.pagespeedLoading = document.getElementById('pagespeedLoading');
+        this.pagespeedResults = document.getElementById('pagespeedResults');
+        this.deviceBtns = document.querySelectorAll('.device-btn');
     }
 
     bindEvents() {
@@ -227,6 +239,29 @@ class ImageConverter {
             });
         }
         
+        // PageSpeed events
+        if (this.analyzePageSpeedBtn) {
+            this.analyzePageSpeedBtn.addEventListener('click', () => this.analyzePageSpeed());
+        }
+        
+        if (this.pagespeedUrl) {
+            this.pagespeedUrl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.analyzePageSpeed();
+                }
+            });
+        }
+        
+        if (this.deviceBtns) {
+            this.deviceBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    this.deviceBtns.forEach(b => b.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    this.pagespeedStrategy = e.currentTarget.getAttribute('data-strategy');
+                });
+            });
+        }
+        
         // Close modals on background click
         [this.duplicateModal, this.presetModal].forEach(modal => {
             if (modal) {
@@ -264,7 +299,52 @@ class ImageConverter {
         this.sidebarSpaceSaved.textContent = this.formatFileSize(totalSaved);
     }
 
-    // Conversion mode handling - UPDATED
+    initializeNotifications() {
+        const notificationCenter = document.getElementById('notificationsCenter');
+        const closeNotificationBtn = document.getElementById('closeNotification');
+        const reopenNotificationBtn = document.getElementById('reopenNotification');
+        
+        if (!notificationCenter || !closeNotificationBtn || !reopenNotificationBtn) return;
+        
+        // Check if notification was previously closed
+        const notificationClosed = localStorage.getItem('notificationClosed');
+        
+        // Show notification on page load (after small delay for better effect)
+        setTimeout(() => {
+            if (!notificationClosed) {
+                notificationCenter.classList.add('active');
+            } else {
+                reopenNotificationBtn.classList.add('visible');
+            }
+        }, 500);
+        
+        // Close notification
+        closeNotificationBtn.addEventListener('click', () => {
+            notificationCenter.classList.add('closing');
+            
+            setTimeout(() => {
+                notificationCenter.classList.remove('active', 'closing');
+                reopenNotificationBtn.classList.add('visible');
+                
+                // Remember that user closed it
+                localStorage.setItem('notificationClosed', 'true');
+            }, 500);
+        });
+        
+        // Reopen notification
+        reopenNotificationBtn.addEventListener('click', () => {
+            reopenNotificationBtn.classList.remove('visible');
+            
+            setTimeout(() => {
+                notificationCenter.classList.add('active');
+                
+                // Remove the "closed" flag
+                localStorage.removeItem('notificationClosed');
+            }, 100);
+        });
+    }
+
+    // Conversion mode handling
     handleModeChange(e) {
         this.conversionMode = e.target.value;
         
@@ -276,7 +356,6 @@ class ImageConverter {
         
         this.conversionModeInfo.textContent = infoTexts[this.conversionMode];
         
-        // Show/hide quality and resize sections based on mode
         if (this.conversionMode === 'webp') {
             this.qualitySection.classList.remove('d-none');
             this.resizeSection.classList.add('d-none');
@@ -288,13 +367,11 @@ class ImageConverter {
             this.resizeSection.classList.remove('d-none');
         }
         
-        // Update file list to show/hide target dimensions
         if (this.files.length > 0) {
             this.renderFileList();
         }
     }
 
-    // Aspect ratio handling - UPDATED
     toggleAspectRatio() {
         this.maintainAspectRatio = !this.maintainAspectRatio;
         
@@ -310,18 +387,15 @@ class ImageConverter {
             this.dimensionHint.textContent = 'Set custom width and height independently';
         }
         
-        // Update file list to show new target dimensions
         if (this.files.length > 0) {
             this.renderFileList();
         }
     }
 
-    // UPDATED - triggers re-render
     handleWidthChange(e) {
         this.targetWidth = parseInt(e.target.value) || 1920;
         
         if (this.maintainAspectRatio && this.files.length > 0) {
-            // Calculate height based on first image's aspect ratio
             const firstFile = this.files[0];
             if (firstFile.originalDimensions) {
                 const [width, height] = firstFile.originalDimensions.split('x').map(Number);
@@ -331,25 +405,21 @@ class ImageConverter {
             }
         }
         
-        // Update file list to show new target dimensions
         if (this.files.length > 0) {
             this.renderFileList();
         }
     }
 
-    // UPDATED - triggers re-render
     handleHeightChange(e) {
         if (!this.maintainAspectRatio) {
             this.targetHeight = parseInt(e.target.value) || 1080;
             
-            // Update file list to show new target dimensions
             if (this.files.length > 0) {
                 this.renderFileList();
             }
         }
     }
 
-    // URL upload methods
     addUrlToList() {
         const url = this.urlInput.value.trim();
         if (!url) return;
@@ -414,7 +484,6 @@ class ImageConverter {
         });
     }
 
-    // Preview panel methods
     togglePreviewPanel() {
         if (this.livePreviewPanel.classList.contains('d-none')) {
             this.livePreviewPanel.classList.remove('d-none');
@@ -516,7 +585,6 @@ class ImageConverter {
         });
     }
 
-    // File handling
     handleDragOver(e) {
         e.preventDefault();
         this.uploadZone.classList.add('dragover');
@@ -559,7 +627,6 @@ class ImageConverter {
                 this.files.push(fileObj);
                 this.totalOriginalSize += file.size;
                 
-                // Initialize transform data for this file
                 this.fileTransforms.set(fileObj.id, {
                     rotate: 0,
                     flipH: false,
@@ -567,7 +634,6 @@ class ImageConverter {
                     background: null
                 });
                 
-                // Load image to get dimensions
                 this.loadImageDimensions(fileObj);
             }
         });
@@ -583,7 +649,7 @@ class ImageConverter {
         
         img.onload = () => {
             fileObj.originalDimensions = `${img.width}x${img.height}`;
-            this.renderFileList(); // Re-render to show dimensions
+            this.renderFileList();
         };
         
         img.src = url;
@@ -632,7 +698,6 @@ class ImageConverter {
             this.showElement(this.statsGrid);
             this.showElement(this.bulkActions);
             
-            // Trigger mode change to show correct sections
             this.handleModeChange({ target: { value: this.conversionMode } });
         } else {
             this.hideElement(this.qualityControl);
@@ -653,7 +718,6 @@ class ImageConverter {
         element.classList.remove('fade-in');
     }
 
-    // UPDATED - Shows target dimensions
     renderFileList() {
         this.fileList.innerHTML = '';
         
@@ -701,8 +765,6 @@ class ImageConverter {
             </button>`;
             
             const finalName = this.getFinalFileName(fileObj, index);
-            
-            // Calculate target dimensions for display
             const targetDimensionsText = this.getTargetDimensionsText(fileObj);
             
             const fileItem = document.createElement('div');
@@ -734,7 +796,6 @@ class ImageConverter {
             this.fileList.appendChild(fileItem);
         });
         
-        // Bind all button events
         this.fileList.querySelectorAll('.tool-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const fileId = parseFloat(e.currentTarget.getAttribute('data-file-id'));
@@ -772,45 +833,36 @@ class ImageConverter {
         });
     }
 
-    // NEW METHOD - Calculate and display target dimensions
     getTargetDimensionsText(fileObj) {
-        // Only show target dimensions for Resize or Both modes
         const shouldResize = this.conversionMode === 'resize' || this.conversionMode === 'both';
         
         if (!shouldResize || !fileObj.originalDimensions) {
             return '';
         }
         
-        // Get original dimensions
         const [origWidth, origHeight] = fileObj.originalDimensions.split('x').map(Number);
         
-        // Calculate target dimensions
         let targetWidth, targetHeight;
         
         if (this.maintainAspectRatio) {
-            // Only resize if image is larger than target width
             if (origWidth > this.targetWidth) {
                 targetWidth = this.targetWidth;
                 const aspectRatio = origHeight / origWidth;
                 targetHeight = Math.round(this.targetWidth * aspectRatio);
             } else {
-                // Image is already smaller, keep original dimensions
                 targetWidth = origWidth;
                 targetHeight = origHeight;
             }
         } else {
-            // Manual dimensions - use whatever user set
             targetWidth = this.targetWidth;
             targetHeight = this.targetHeight;
         }
         
-        // Apply rotation to dimensions if needed
         const transforms = this.fileTransforms.get(fileObj.id) || {};
         if (transforms.rotate === 90 || transforms.rotate === 270) {
             [targetWidth, targetHeight] = [targetHeight, targetWidth];
         }
         
-        // Show arrow with target dimensions
         return ` → ${targetWidth}x${targetHeight}`;
     }
 
@@ -866,12 +918,11 @@ class ImageConverter {
 
     getFinalFileName(fileObj, index) {
         if (this.renamePrefix) {
-            // Determine extension based on mode and original file
             let ext;
             if (this.conversionMode === 'webp' || this.conversionMode === 'both') {
                 ext = 'webp';
             } else if (fileObj.file.type === 'image/svg+xml') {
-                ext = 'png'; // SVG becomes PNG in resize mode
+                ext = 'png';
             } else {
                 ext = fileObj.name.split('.').pop();
             }
@@ -880,7 +931,6 @@ class ImageConverter {
             if (fileObj.convertedToWebP) {
                 return fileObj.name.replace(/\.(jpg|jpeg|png|svg)$/i, '.webp');
             } else if (fileObj.file.type === 'image/svg+xml' && this.conversionMode === 'resize') {
-                // SVG in resize mode becomes PNG
                 return fileObj.name.replace(/\.svg$/i, '.png');
             }
             return fileObj.name;
@@ -922,7 +972,6 @@ class ImageConverter {
             this.progressText.innerHTML = `<i class="fas fa-images text-primary me-2"></i>Ready to convert ${this.files.length} files`;
         }
         
-        // Update statistics section
         const totalConversions = this.history.reduce((sum, item) => sum + item.fileCount, 0);
         const totalSaved = this.history.reduce((sum, item) => sum + (item.originalSize - item.convertedSize), 0);
         const totalProcessed = this.history.reduce((sum, item) => sum + item.fileCount, 0);
@@ -984,7 +1033,6 @@ class ImageConverter {
                 img.src = originalDataUrl;
             });
             
-            // Store original dimensions
             fileObj.originalDimensions = `${img.width}x${img.height}`;
             
             let canvasWidth = img.width;
@@ -1004,7 +1052,6 @@ class ImageConverter {
                 }
             }
             
-            // Apply individual transformations
             const transforms = this.fileTransforms.get(fileObj.id) || {};
             
             if (transforms.rotate === 90 || transforms.rotate === 270) {
@@ -1030,25 +1077,20 @@ class ImageConverter {
             ctx.restore();
             
             const shouldConvertToWebP = this.conversionMode === 'webp' || this.conversionMode === 'both';
-
-            // Determine output format
+            
             let mimeType, quality;
             if (shouldConvertToWebP) {
-                // Convert to WebP
                 mimeType = 'image/webp';
                 quality = this.quality;
             } else {
-                // Resize only mode - but SVG can't be output from canvas
                 if (fileObj.file.type === 'image/svg+xml') {
-                    // SVG must become PNG when resizing (canvas limitation)
                     mimeType = 'image/png';
-                    quality = 1.0; // Max quality for PNG
+                    quality = 1.0;
                 } else {
-                    // Keep original format (JPEG/PNG)
                     mimeType = fileObj.file.type;
                     quality = 0.92;
                 }
-}
+            }
             
             await new Promise(resolve => {
                 canvas.toBlob(blob => {
@@ -1221,7 +1263,6 @@ class ImageConverter {
         }
     }
 
-    // Duplicate detector
     openDuplicateDetector() {
         this.duplicateModal.classList.remove('d-none');
         this.scanForDuplicates();
@@ -1285,7 +1326,6 @@ class ImageConverter {
         alert(`Removed ${removed} duplicate(s)!`);
     }
 
-    // Preset system
     openPresetModal() {
         this.presetModal.classList.remove('d-none');
         this.presetNameInput.value = '';
@@ -1375,7 +1415,6 @@ class ImageConverter {
         this.renamePrefix = preset.renamePrefix;
         this.preserveExif = preset.preserveExif;
         
-        // Update UI elements
         const modeMap = {
             'webp': 'modeWebpOnly',
             'resize': 'modeResizeOnly',
@@ -1412,7 +1451,249 @@ class ImageConverter {
         this.renderPresets();
     }
 
-    // Changelog
+    // PageSpeed Insights Methods - WITH YOUR API KEY
+    async analyzePageSpeed() {
+        if (!this.pagespeedUrl) return;
+        
+        const url = this.pagespeedUrl.value.trim();
+        
+        if (!url) {
+            alert('Please enter a URL to analyze');
+            return;
+        }
+        
+        try {
+            new URL(url);
+        } catch (e) {
+            alert('Please enter a valid URL (e.g., https://example.com)');
+            return;
+        }
+        
+        this.pagespeedLoading.classList.remove('d-none');
+        this.pagespeedResults.classList.add('d-none');
+        this.analyzePageSpeedBtn.disabled = true;
+        this.analyzePageSpeedBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+        
+        try {
+            // Categories to analyze
+            const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
+            let apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${this.pagespeedStrategy}&key=${this.pagespeedApiKey}`;
+            
+            // Add categories to request
+            categories.forEach(cat => {
+                apiUrl += `&category=${cat}`;
+            });
+            
+            console.log('Fetching PageSpeed data for:', url);
+            
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            
+            console.log('PageSpeed response:', data);
+            
+            if (data.error) {
+                throw new Error(data.error.message || 'Failed to analyze URL');
+            }
+            
+            if (!data.lighthouseResult) {
+                throw new Error('No lighthouse results in response');
+            }
+            
+            this.displayPageSpeedResults(data);
+            
+        } catch (error) {
+            console.error('PageSpeed error:', error);
+            
+            let errorMessage = error.message;
+            let troubleshooting = '';
+            
+            // Provide helpful troubleshooting based on error type
+            if (errorMessage.includes('CORS')) {
+                troubleshooting = '<p style="color: #666;">This appears to be a CORS issue. The API should work correctly.</p>';
+            } else if (errorMessage.includes('Failed to fetch')) {
+                troubleshooting = '<p style="color: #666;">Network error. Please check your internet connection.</p>';
+            } else if (errorMessage.includes('Invalid response')) {
+                troubleshooting = '<p style="color: #666;">The URL might not be publicly accessible or might have blocked the PageSpeed bot.</p>';
+            }
+            
+            this.pagespeedResults.innerHTML = `
+                <div class="metrics-section">
+                    <h3><i class="fas fa-exclamation-triangle me-2"></i>Analysis Error</h3>
+                    <p style="color: #dc3545; text-align: center; font-weight: 600;">${errorMessage}</p>
+                    ${troubleshooting}
+                    
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="font-size: 1rem; margin-bottom: 0.5rem;">Troubleshooting Tips:</h4>
+                        <ul style="text-align: left; color: #666; line-height: 1.8;">
+                            <li>Make sure the URL is publicly accessible (not behind a login)</li>
+                            <li>Try with "https://" instead of "http://"</li>
+                            <li>Verify the website is online and responding</li>
+                            <li>Check if the URL is complete (including domain extension)</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center;">
+                        <a href="https://pagespeed.web.dev/analysis?url=${encodeURIComponent(url)}" target="_blank" class="btn-custom" style="text-decoration: none; padding: 0.8rem 1.5rem; display: inline-block;">
+                            <i class="fas fa-external-link-alt me-2"></i>Try on PageSpeed.web.dev
+                        </a>
+                    </div>
+                </div>
+            `;
+            this.pagespeedResults.classList.remove('d-none');
+        } finally {
+            this.pagespeedLoading.classList.add('d-none');
+            this.analyzePageSpeedBtn.disabled = false;
+            this.analyzePageSpeedBtn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze';
+        }
+    }
+
+    displayPageSpeedResults(data) {
+        try {
+            const lighthouse = data.lighthouseResult;
+            
+            if (!lighthouse || !lighthouse.categories) {
+                throw new Error('Invalid response from PageSpeed API');
+            }
+            
+            const categories = lighthouse.categories;
+            const audits = lighthouse.audits;
+            
+            // Safely get scores with fallbacks
+            const performanceScore = categories.performance?.score ? Math.round(categories.performance.score * 100) : 0;
+            const accessibilityScore = categories.accessibility?.score ? Math.round(categories.accessibility.score * 100) : 0;
+            const bestPracticesScore = categories['best-practices']?.score ? Math.round(categories['best-practices'].score * 100) : 0;
+            const seoScore = categories.seo?.score ? Math.round(categories.seo.score * 100) : 0;
+            
+            // Safely get metrics with fallbacks
+            const fcp = audits['first-contentful-paint']?.displayValue || 'N/A';
+            const lcp = audits['largest-contentful-paint']?.displayValue || 'N/A';
+            const tbt = audits['total-blocking-time']?.displayValue || 'N/A';
+            const cls = audits['cumulative-layout-shift']?.displayValue || 'N/A';
+            const si = audits['speed-index']?.displayValue || 'N/A';
+            
+            // Safely get opportunities
+            const opportunities = audits ? Object.values(audits)
+                .filter(audit => audit && audit.details && audit.details.type === 'opportunity' && audit.score !== null && audit.score < 1)
+                .sort((a, b) => (b.details?.overallSavingsMs || 0) - (a.details?.overallSavingsMs || 0))
+                .slice(0, 5) : [];
+            
+            const html = `
+                <div class="score-summary">
+                    <div class="score-card">
+                        <div class="score-label">Performance</div>
+                        <div class="score-circle ${this.getScoreClass(performanceScore)}">
+                            ${performanceScore}
+                        </div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-label">Accessibility</div>
+                        <div class="score-circle ${this.getScoreClass(accessibilityScore)}">
+                            ${accessibilityScore}
+                        </div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-label">Best Practices</div>
+                        <div class="score-circle ${this.getScoreClass(bestPracticesScore)}">
+                            ${bestPracticesScore}
+                        </div>
+                    </div>
+                    <div class="score-card">
+                        <div class="score-label">SEO</div>
+                        <div class="score-circle ${this.getScoreClass(seoScore)}">
+                            ${seoScore}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metrics-section">
+                    <h3><i class="fas fa-clock me-2"></i>Core Web Vitals</h3>
+                    <div class="metric-item">
+                        <div class="metric-name">
+                            <strong>First Contentful Paint (FCP)</strong>
+                            <div style="font-size: 0.85rem; color: #666;">Measures when content first appears</div>
+                        </div>
+                        <div class="metric-value ${audits['first-contentful-paint']?.score ? this.getMetricClass(audits['first-contentful-paint'].score) : 'average'}">${fcp}</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-name">
+                            <strong>Largest Contentful Paint (LCP)</strong>
+                            <div style="font-size: 0.85rem; color: #666;">Measures loading performance</div>
+                        </div>
+                        <div class="metric-value ${audits['largest-contentful-paint']?.score ? this.getMetricClass(audits['largest-contentful-paint'].score) : 'average'}">${lcp}</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-name">
+                            <strong>Total Blocking Time (TBT)</strong>
+                            <div style="font-size: 0.85rem; color: #666;">Measures interactivity</div>
+                        </div>
+                        <div class="metric-value ${audits['total-blocking-time']?.score ? this.getMetricClass(audits['total-blocking-time'].score) : 'average'}">${tbt}</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-name">
+                            <strong>Cumulative Layout Shift (CLS)</strong>
+                            <div style="font-size: 0.85rem; color: #666;">Measures visual stability</div>
+                        </div>
+                        <div class="metric-value ${audits['cumulative-layout-shift']?.score ? this.getMetricClass(audits['cumulative-layout-shift'].score) : 'average'}">${cls}</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-name">
+                            <strong>Speed Index</strong>
+                            <div style="font-size: 0.85rem; color: #666;">How quickly content is displayed</div>
+                        </div>
+                        <div class="metric-value ${audits['speed-index']?.score ? this.getMetricClass(audits['speed-index'].score) : 'average'}">${si}</div>
+                    </div>
+                </div>
+                
+                ${opportunities.length > 0 ? `
+                    <div class="opportunities-section">
+                        <h3><i class="fas fa-lightbulb me-2"></i>Optimization Opportunities</h3>
+                        ${opportunities.map(opp => `
+                            <div class="opportunity-item">
+                                <div class="opportunity-title">${opp.title || 'Optimization Available'}</div>
+                                <div class="opportunity-description">${opp.description || ''}</div>
+                                ${opp.details && opp.details.overallSavingsMs ? 
+                                    `<span class="opportunity-savings">
+                                        <i class="fas fa-clock me-1"></i>Potential savings: ${Math.round(opp.details.overallSavingsMs / 1000)}s
+                                    </span>` 
+                                    : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<div class="metrics-section"><p style="text-align: center; color: #666;"><i class="fas fa-check-circle me-2"></i>No major optimization opportunities found!</p></div>'}
+            `;
+            
+            this.pagespeedResults.innerHTML = html;
+            this.pagespeedResults.classList.remove('d-none');
+            
+        } catch (error) {
+            console.error('Error displaying PageSpeed results:', error);
+            this.pagespeedResults.innerHTML = `
+                <div class="metrics-section">
+                    <h3><i class="fas fa-exclamation-triangle me-2"></i>Display Error</h3>
+                    <p style="color: #dc3545; text-align: center;">Failed to display PageSpeed results</p>
+                    <p style="text-align: center; color: #666;">The API returned data in an unexpected format.</p>
+                    <details style="margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
+                        <summary style="cursor: pointer; font-weight: 600;">Show Raw Response</summary>
+                        <pre style="margin-top: 1rem; overflow: auto; max-height: 300px; font-size: 0.8rem;">${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                </div>
+            `;
+            this.pagespeedResults.classList.remove('d-none');
+        }
+    }
+
+    getScoreClass(score) {
+        if (score >= 90) return 'good';
+        if (score >= 50) return 'average';
+        return 'poor';
+    }
+
+    getMetricClass(score) {
+        if (score >= 0.9) return 'good';
+        if (score >= 0.5) return 'average';
+        return 'poor';
+    }
+
     showChangelog(file) {
         this.changelogViewer.classList.remove('d-none');
         
@@ -1426,300 +1707,41 @@ class ImageConverter {
         
         const changes = {
             'html': {
-                old: `<!-- OLD VERSION - Basic Structure -->
-<div class="upload-zone">
-    <input type="file" id="fileInput">
-</div>
-
-<!-- Simple quality slider -->
-<div class="quality-control">
-    <input type="range" id="qualitySlider">
-</div>
-
-<!-- Basic buttons -->
-<button id="convertBtn">Convert</button>
-<button id="clearBtn">Clear</button>
-
-<!-- Simple file list -->
-<div class="file-list" id="fileList"></div>
-
-<!-- No sidebar navigation -->
-<!-- No live preview -->
-<!-- No presets system -->
-<!-- No changelog viewer -->`,
-                new: `<!-- NEW VERSION - Advanced Features -->
-
-<!-- Sidebar Navigation -->
-<div class="sidebar" id="sidebar">
-    <nav class="sidebar-nav">
-        <a class="nav-item" data-section="converter">Converter</a>
-        <a class="nav-item" data-section="history">History</a>
-        <a class="nav-item" data-section="stats">Statistics</a>
-        <a class="nav-item" data-section="presets">Presets</a>
-        <a class="nav-item" data-section="changelog">Changelog</a>
-    </nav>
-</div>
-
-<!-- Upload with URL support -->
-<div class="upload-zone" id="uploadZone">
-    <input type="file" id="fileInput" multiple>
-</div>
-<button class="btn-styled" id="toggleUrlUpload">Upload from URL</button>
-
-<!-- Advanced Conversion Modes -->
-<div class="quality-control">
-    <div class="segmented-control">
-        <input type="radio" id="modeWebpOnly" value="webp">
-        <input type="radio" id="modeResizeOnly" value="resize">
-        <input type="radio" id="modeBoth" value="both">
-    </div>
-    
-    <!-- Resize with Aspect Ratio Control -->
-    <div class="resize-section">
-        <button class="aspect-btn" id="aspectRatioBtn">
-            Maintain Aspect Ratio
-        </button>
-        <input type="number" id="widthInput">
-        <input type="number" id="heightInput">
-    </div>
-    
-    <!-- Save Preset Button -->
-    <button class="btn-styled" id="savePresetBtn">
-        Save Settings as Preset
+                old: `<!-- OLD VERSION -->
+<!-- No PageSpeed section -->`,
+                new: `<!-- NEW VERSION -->
+<!-- PageSpeed Insights Section -->
+<div class="content-section" id="pagespeedSection">
+    <input type="url" id="pagespeedUrl">
+    <button class="btn-custom" id="analyzePageSpeedBtn">
+        <i class="fas fa-search me-2"></i>Analyze
     </button>
-</div>
-
-<!-- File List with Tools & Target Dimensions -->
-<div class="file-list">
-    <!-- Shows: 153.54 KB • 960x720 → 1920x1440 -->
-    <div class="file-item">
-        <button class="tool-btn" title="Rotate">🔄</button>
-        <button class="tool-btn" title="Flip H">↔️</button>
-        <button class="reset-btn" title="Reset">↩️</button>
-    </div>
-</div>
-
-<!-- Live Preview Panel -->
-<div class="live-preview-panel">
-    <div class="preview-panel-content">
-        <!-- Before/after with transforms -->
-    </div>
-</div>
-
-<!-- Complete Feature Set -->
-<div class="content-section" id="presetsSection"></div>
-<div class="content-section" id="changelogSection"></div>
-<div class="content-section" id="historySection"></div>`
+</div>`
             },
             'scss': {
-                old: `// OLD VERSION - Basic Styling
-.upload-zone {
-    border: 2px dashed #ccc;
-    padding: 2rem;
-}
-
-button {
-    padding: 0.5rem 1rem;
-    background: blue;
-}
-
-.file-item {
-    padding: 1rem;
-    border: 1px solid #ddd;
-}`,
-                new: `// NEW VERSION - Professional Design
-
-// Styled Buttons
-.btn-styled {
-    background: $primary-gradient !important;
-    border-radius: 12px;
-    padding: 0.8rem 1.5rem;
-    @include button-glow();
-    
-    &:hover {
-        transform: translateY(-3px);
-    }
-}
-
-// Tool Buttons with Tooltips
-.tool-btn {
-    &:hover::after {
-        content: attr(title);
-        position: absolute;
-        bottom: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        color: white;
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-    }
-    
-    &.active {
-        background: $primary-gradient;
-        color: white;
-    }
-}
-
-// Aspect Ratio Toggle
-.aspect-ratio-toggle {
-    .aspect-btn.active {
-        background: $primary-gradient;
-        color: white;
-    }
-}
-
-// File Details with Target Dimensions
-.file-details {
-    // Shows: 153.54 KB • 960x720 → 1920x1440
-    color: #666;
-    font-size: 0.9rem;
-}
-
-// Centered Headers
-.section-header-centered {
-    text-align: center;
-    h2 {
-        color: white;
-        font-size: 2.5rem;
-    }
-}
-
-// Changelog White Background
-.changelog-container {
-    background: white;
-    
-    .changelog-side {
-        &.old { 
-            pre { color: #d32f2f; }
-        }
-        &.new { 
-            pre { color: #388e3c; }
-        }
+                old: `// OLD VERSION
+// No PageSpeed styles`,
+                new: `// NEW VERSION
+.pagespeed-container {
+    .score-circle {
+        &.good { background: $success-gradient; }
+        &.average { background: $warning-gradient; }
+        &.poor { background: $danger-gradient; }
     }
 }`
             },
             'js': {
                 old: `// OLD VERSION
+// No PageSpeed`,
+                new: `// NEW VERSION
 class ImageConverter {
     constructor() {
-        this.files = [];
-        this.quality = 0.8;
+        this.pagespeedApiKey = 'YOUR_API_KEY';
     }
     
-    async convertFile(file) {
-        // Simple conversion
-        canvas.toBlob(blob => {
-            // Download
-        }, 'image/webp', this.quality);
-    }
-}`,
-                new: `// NEW VERSION - Complete Features
-
-class ImageConverter {
-    constructor() {
-        this.conversionMode = 'webp'; // webp/resize/both
-        this.targetWidth = 1920;
-        this.targetHeight = 1080;
-        this.maintainAspectRatio = true;
-        this.fileTransforms = new Map();
-        this.presets = this.loadPresets();
-    }
-    
-    // NEW: Shows target dimensions in real-time
-    getTargetDimensionsText(fileObj) {
-        const shouldResize = this.conversionMode === 'resize' || 
-                            this.conversionMode === 'both';
-        
-        if (!shouldResize || !fileObj.originalDimensions) {
-            return '';
-        }
-        
-        const [origWidth, origHeight] = 
-            fileObj.originalDimensions.split('x').map(Number);
-        
-        let targetWidth, targetHeight;
-        
-        if (this.maintainAspectRatio) {
-            if (origWidth > this.targetWidth) {
-                targetWidth = this.targetWidth;
-                const aspectRatio = origHeight / origWidth;
-                targetHeight = Math.round(targetWidth * aspectRatio);
-            } else {
-                targetWidth = origWidth;
-                targetHeight = origHeight;
-            }
-        } else {
-            targetWidth = this.targetWidth;
-            targetHeight = this.targetHeight;
-        }
-        
-        // Apply rotation
-        const transforms = this.fileTransforms.get(fileObj.id);
-        if (transforms.rotate === 90 || transforms.rotate === 270) {
-            [targetWidth, targetHeight] = [targetHeight, targetWidth];
-        }
-        
-        return \` → \${targetWidth}x\${targetHeight}\`;
-    }
-    
-    // UPDATED: Re-renders on dimension changes
-    handleWidthChange(e) {
-        this.targetWidth = parseInt(e.target.value) || 1920;
-        
-        if (this.maintainAspectRatio && this.files.length > 0) {
-            // Auto-calculate height
-            const firstFile = this.files[0];
-            const [width, height] = 
-                firstFile.originalDimensions.split('x').map(Number);
-            const aspectRatio = height / width;
-            this.targetHeight = Math.round(this.targetWidth * aspectRatio);
-            this.heightInput.value = this.targetHeight;
-        }
-        
-        // Update display immediately
-        if (this.files.length > 0) {
-            this.renderFileList();
-        }
-    }
-    
-    // NEW: Individual file tools
-    applyIndividualTool(fileId, tool) {
-        const transforms = this.fileTransforms.get(fileId);
-        
-        switch(tool) {
-            case 'rotate':
-                transforms.rotate = (transforms.rotate + 90) % 360;
-                break;
-            case 'flipH':
-                transforms.flipH = !transforms.flipH;
-                break;
-            case 'flipV':
-                transforms.flipV = !transforms.flipV;
-                break;
-            case 'background':
-                transforms.background = 
-                    transforms.background === 'white' ? null : 'white';
-                break;
-        }
-        
-        this.renderFileList();
-        this.updateLivePreview();
-    }
-    
-    // NEW: Preset system
-    savePreset() {
-        const preset = {
-            id: Date.now(),
-            name: this.presetNameInput.value,
-            conversionMode: this.conversionMode,
-            quality: this.quality,
-            targetWidth: this.targetWidth,
-            targetHeight: this.targetHeight,
-            maintainAspectRatio: this.maintainAspectRatio
-        };
-        
-        this.presets.push(preset);
-        localStorage.setItem('converterPresets', 
-                            JSON.stringify(this.presets));
+    async analyzePageSpeed() {
+        const apiUrl = \`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=\${url}&strategy=\${this.pagespeedStrategy}&key=\${this.pagespeedApiKey}\`;
+        // Fetch and display results
     }
 }`
             }
@@ -1729,7 +1751,6 @@ class ImageConverter {
         this.changelogNew.textContent = changes[file].new;
     }
 
-    // History methods
     saveToHistory() {
         const historyItem = {
             date: new Date().toISOString(),
@@ -1832,7 +1853,6 @@ class ImageConverter {
 document.addEventListener('DOMContentLoaded', () => {
     window.converter = new ImageConverter();
     
-    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey || e.metaKey) {
             switch(e.key) {

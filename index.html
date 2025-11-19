@@ -14,14 +14,29 @@
         <i class="fas fa-bars"></i>
     </button>
 
+    <!-- Notification Center -->
     <div id="notificationsCenter" class="notification-center">
-        <p>I just added SVG Support so you can turn SVG's to WebP too.
-            What use would this App have if it didn't support that amiright?
-            <br> <b>Edit:</b> It didnt work first but it should be working now!
-            Happy converting ʕ•ᴥ•ʔ <br>
-            <b>Edit Nr2:</b> Adding Pagespeed Insights with some extras to it soontm
-        </p>
+        <button class="notification-close" id="closeNotification" title="Close">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="notification-icon">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div class="notification-content">
+            <h4>What's New! 🎉</h4>
+            <p>
+                <b>NEW:</b> I just added PageSpeed Insights! <br>
+                There will be some PageSpeed Insights tools too soon.
+                Please make sure to check it out! If you have any suggestions for me to add to the website, make sure to tell me ʕ•ᴥ•ʔ
+            </p>
+        </div>
     </div>
+
+    <!-- Reopen Button (shows when notification is closed) -->
+    <button id="reopenNotification" class="notification-reopen" title="Show Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="notification-badge">1</span>
+    </button>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -47,6 +62,10 @@
             <a href="#" class="nav-item" data-section="presets">
                 <i class="fas fa-save"></i>
                 <span>Saved Presets</span>
+            </a>
+            <a href="#" class="nav-item" data-section="pagespeed">
+                <i class="fas fa-save"></i>
+                <span>Pagespeed Insights</span>
             </a>
             <a href="#" class="nav-item" data-section="changelog">
                 <i class="fas fa-code-branch"></i>
@@ -345,6 +364,44 @@
                 </div>
                 <div class="presets-grid" id="presetsGrid">
                     <p class="text-center text-muted-white">No saved presets yet. Save your current settings from the converter page!</p>
+                </div>
+            </div>
+
+            <!-- PageSpeed Insights Section -->
+            <div class="content-section" id="pagespeedSection">
+                <div class="section-header-centered">
+                    <h2><i class="fas fa-tachometer-alt me-3"></i>PageSpeed Insights</h2>
+                    <p>Analyze your website's performance and get optimization suggestions</p>
+                </div>
+                
+                <div class="pagespeed-container">
+                    <div class="pagespeed-input-section">
+                        <div class="pagespeed-input-group">
+                            <input type="url" id="pagespeedUrl" class="pagespeed-input" placeholder="Enter website URL (e.g., https://example.com)">
+                            <button class="btn-custom btn-styled" id="analyzePageSpeedBtn">
+                                <i class="fas fa-search me-2"></i>Analyze
+                            </button>
+                        </div>
+                        
+                        <div class="device-toggle">
+                            <button class="device-btn active" data-strategy="mobile">
+                                <i class="fas fa-mobile-alt me-2"></i>Mobile
+                            </button>
+                            <button class="device-btn" data-strategy="desktop">
+                                <i class="fas fa-desktop me-2"></i>Desktop
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="pagespeed-loading d-none" id="pagespeedLoading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Analyzing website performance...</p>
+                        <small>This may take 10-30 seconds</small>
+                    </div>
+                    
+                    <div class="pagespeed-results d-none" id="pagespeedResults">
+                        <!-- Results will be dynamically inserted here -->
+                    </div>
                 </div>
             </div>
 
