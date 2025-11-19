@@ -20,7 +20,7 @@ class ImageConverter {
         
         // PageSpeed properties
         this.pagespeedStrategy = 'mobile';
-        this.pagespeedApiKey = 'AIzaSyAnhmyxMHIsJdvyka_SgD4KHltFL9g7WPg';
+        this.pagespeedApiKey = '';
         this.previousPageSpeedResults = this.loadPreviousPageSpeed();
         this.currentPageSpeedData = null;
 
