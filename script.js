@@ -15,17 +15,19 @@ class ImageConverter {
         this.urlList = [];
         this.presets = this.loadPresets();
         
-        // Individual file transformations
         this.fileTransforms = new Map();
         
-        // PageSpeed properties
         this.pagespeedStrategy = 'mobile';
-        this.pagespeedApiKey = '';
         this.previousPageSpeedResults = this.loadPreviousPageSpeed();
-        this.currentPageSpeedData = null;
-
-        // NEW: track if PageSpeed is currently analyzing
+        this.currentPageSpeedData = {
+            mobile: null,
+            desktop: null
+        };
         this.isAnalyzingPageSpeed = false;
+        
+        this.githubRepo = 'cansumasearch-dev/webp-converter';
+        this.changelogCache = this.loadChangelogCache();
+        this.changelogFetched = false;
         
         this.initializeElements();
         this.bindEvents();
@@ -33,10 +35,47 @@ class ImageConverter {
         this.renderPresets();
         this.updateSidebarStats();
         this.initializeNotifications();
+        this.restoreLastSection();
+    }
+
+    saveCurrentSection(sectionName) {
+        localStorage.setItem('lastActiveSection', sectionName);
+        this.updateLivePreviewVisibility(sectionName);
+        
+        if (sectionName === 'changelog' && !this.changelogFetched) {
+            setTimeout(() => {
+                this.autoFetchChangelog();
+            }, 500);
+        }
+    }
+
+    updateLivePreviewVisibility(sectionName) {
+        if (sectionName === 'converter') {
+            if (this.files.length > 0 && !this.livePreviewPanel.classList.contains('d-none')) {
+                this.livePreviewPanel.style.display = 'block';
+            }
+        } else {
+            this.livePreviewPanel.style.display = 'none';
+            this.reopenPreviewBtn.style.display = 'none';
+        }
+    }
+
+    restoreLastSection() {
+        const lastSection = localStorage.getItem('lastActiveSection') || 'converter';
+        this.switchSection(lastSection);
+    }
+
+    loadChangelogCache() {
+        const cached = localStorage.getItem('changelogCache');
+        return cached ? JSON.parse(cached) : null;
+    }
+
+    saveChangelogCache(data) {
+        localStorage.setItem('changelogCache', JSON.stringify(data));
+        this.changelogCache = data;
     }
 
     initializeElements() {
-        // Main elements
         this.uploadZone = document.getElementById('uploadZone');
         this.fileInput = document.getElementById('fileInput');
         this.qualityControl = document.getElementById('qualityControl');
@@ -55,40 +94,33 @@ class ImageConverter {
         this.fileList = document.getElementById('fileList');
         this.bulkActions = document.getElementById('bulkActions');
         
-        // Stats elements
         this.totalFilesEl = document.getElementById('totalFiles');
         this.completedFilesEl = document.getElementById('completedFiles');
         this.remainingFilesEl = document.getElementById('remainingFiles');
         this.totalSavingsEl = document.getElementById('totalSavings');
         
-        // Conversion mode radio buttons
         this.modeWebpOnly = document.getElementById('modeWebpOnly');
         this.modeResizeOnly = document.getElementById('modeResizeOnly');
         this.modeBoth = document.getElementById('modeBoth');
         
-        // Quality and resize sections
         this.qualitySection = document.getElementById('qualitySection');
         this.resizeSection = document.getElementById('resizeSection');
         
-        // Dimension controls
         this.widthInput = document.getElementById('widthInput');
         this.heightInput = document.getElementById('heightInput');
         this.aspectRatioBtn = document.getElementById('aspectRatioBtn');
         this.dimensionHint = document.getElementById('dimensionHint');
         
-        // Rename & EXIF
         this.renameInput = document.getElementById('renamePrefix');
         this.renamePreview = document.getElementById('renamePreview');
         this.preserveExifToggle = document.getElementById('preserveExif');
         
-        // Bulk action buttons
         this.sortBySizeBtn = document.getElementById('sortBySizeBtn');
         this.sortBySavingsBtn = document.getElementById('sortBySavingsBtn');
         this.removeFailedBtn = document.getElementById('removeFailedBtn');
         this.reconvertFailedBtn = document.getElementById('reconvertFailedBtn');
         this.duplicateDetectorBtn = document.getElementById('duplicateDetectorBtn');
         
-        // Sidebar elements
         this.sidebar = document.getElementById('sidebar');
         this.sidebarToggle = document.getElementById('sidebarToggle');
         this.sidebarClose = document.getElementById('sidebarClose');
@@ -98,30 +130,25 @@ class ImageConverter {
         this.sidebarTotalConversions = document.getElementById('sidebarTotalConversions');
         this.sidebarSpaceSaved = document.getElementById('sidebarSpaceSaved');
         
-        // URL upload elements
         this.toggleUrlUploadBtn = document.getElementById('toggleUrlUpload');
         this.urlUploadSection = document.getElementById('urlUploadSection');
         this.urlInput = document.getElementById('urlInput');
         this.urlAddBtn = document.getElementById('urlAddBtn');
         this.urlListEl = document.getElementById('urlList');
         
-        // History elements
         this.historyList = document.getElementById('historyList');
         this.clearHistoryBtn = document.getElementById('clearHistoryBtn');
         
-        // Statistics elements
         this.statTotalConversions = document.getElementById('statTotalConversions');
         this.statTotalSaved = document.getElementById('statTotalSaved');
         this.statAvgSavings = document.getElementById('statAvgSavings');
         this.statTotalFiles = document.getElementById('statTotalFiles');
         
-        // Live Preview Panel
         this.livePreviewPanel = document.getElementById('livePreviewPanel');
         this.previewPanelContent = document.getElementById('previewPanelContent');
         this.previewToggle = document.getElementById('previewToggle');
         this.reopenPreviewBtn = document.getElementById('reopenPreviewBtn');
         
-        // Preset elements
         this.savePresetBtn = document.getElementById('savePresetBtn');
         this.presetModal = document.getElementById('presetModal');
         this.closePresetModal = document.getElementById('closePresetModal');
@@ -129,67 +156,51 @@ class ImageConverter {
         this.confirmSavePreset = document.getElementById('confirmSavePreset');
         this.presetsGrid = document.getElementById('presetsGrid');
         
-        // Duplicate modal
         this.duplicateModal = document.getElementById('duplicateModal');
         this.closeDuplicateModal = document.getElementById('closeDuplicateModal');
         this.duplicateResults = document.getElementById('duplicateResults');
         
-        // Changelog elements
-        this.changelogBtns = document.querySelectorAll('.changelog-btn');
-        this.changelogViewer = document.getElementById('changelogViewer');
-        this.closeChangelog = document.getElementById('closeChangelog');
-        this.changelogTitle = document.getElementById('changelogTitle');
-        this.changelogOld = document.getElementById('changelogOld');
-        this.changelogNew = document.getElementById('changelogNew');
-        
-        // PageSpeed elements
         this.pagespeedUrl = document.getElementById('pagespeedUrl');
         this.analyzePageSpeedBtn = document.getElementById('analyzePageSpeedBtn');
         this.pagespeedLoading = document.getElementById('pagespeedLoading');
         this.pagespeedResults = document.getElementById('pagespeedResults');
         this.deviceBtns = document.querySelectorAll('.device-btn');
+        
+        this.changelogLoading = document.getElementById('changelogLoading');
+        this.changelogTimeline = document.getElementById('changelogTimeline');
     }
 
     bindEvents() {
-        // Upload events
         this.uploadZone.addEventListener('click', () => this.fileInput.click());
         this.uploadZone.addEventListener('dragover', this.handleDragOver.bind(this));
         this.uploadZone.addEventListener('dragleave', this.handleDragLeave.bind(this));
         this.uploadZone.addEventListener('drop', this.handleDrop.bind(this));
         this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
         
-        // Quality control
         this.qualitySlider.addEventListener('input', this.handleQualityChange.bind(this));
         
-        // Conversion mode
         this.modeWebpOnly.addEventListener('change', this.handleModeChange.bind(this));
         this.modeResizeOnly.addEventListener('change', this.handleModeChange.bind(this));
         this.modeBoth.addEventListener('change', this.handleModeChange.bind(this));
         
-        // Aspect ratio toggle
         this.aspectRatioBtn.addEventListener('click', this.toggleAspectRatio.bind(this));
         
-        // Dimension inputs
         this.widthInput.addEventListener('input', this.handleWidthChange.bind(this));
         this.heightInput.addEventListener('input', this.handleHeightChange.bind(this));
         
-        // Action buttons
         this.convertBtn.addEventListener('click', this.startConversion.bind(this));
         this.clearBtn.addEventListener('click', this.clearAll.bind(this));
         this.downloadAllBtn.addEventListener('click', this.downloadAll.bind(this));
         
-        // Rename and EXIF
         this.renameInput.addEventListener('input', this.handleRenameInput.bind(this));
         this.preserveExifToggle.addEventListener('change', this.handleExifToggle.bind(this));
         
-        // Bulk actions
         this.sortBySizeBtn.addEventListener('click', () => this.sortFiles('size'));
         this.sortBySavingsBtn.addEventListener('click', () => this.sortFiles('savings'));
         this.removeFailedBtn.addEventListener('click', this.removeFailed.bind(this));
         this.reconvertFailedBtn.addEventListener('click', this.reconvertFailed.bind(this));
         this.duplicateDetectorBtn.addEventListener('click', this.openDuplicateDetector.bind(this));
         
-        // Sidebar events
         this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
         this.sidebarClose.addEventListener('click', () => this.toggleSidebar());
         this.sidebarOverlay.addEventListener('click', () => this.toggleSidebar());
@@ -203,7 +214,6 @@ class ImageConverter {
             });
         });
         
-        // URL upload events
         this.toggleUrlUploadBtn.addEventListener('click', () => {
             this.urlUploadSection.classList.toggle('d-none');
         });
@@ -215,36 +225,17 @@ class ImageConverter {
             }
         });
         
-        // History events
         this.clearHistoryBtn.addEventListener('click', this.clearHistory.bind(this));
         
-        // Live Preview Panel events
         this.previewToggle.addEventListener('click', () => this.togglePreviewPanel());
         this.reopenPreviewBtn.addEventListener('click', () => this.togglePreviewPanel());
         
-        // Preset events
         this.savePresetBtn.addEventListener('click', () => this.openPresetModal());
         this.closePresetModal.addEventListener('click', () => this.closeModal(this.presetModal));
         this.confirmSavePreset.addEventListener('click', () => this.savePreset());
         
-        // Duplicate modal
         this.closeDuplicateModal.addEventListener('click', () => this.closeModal(this.duplicateModal));
         
-        // Changelog events
-        this.changelogBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const file = btn.getAttribute('data-file');
-                this.showChangelog(file);
-            });
-        });
-        
-        if (this.closeChangelog) {
-            this.closeChangelog.addEventListener('click', () => {
-                this.changelogViewer.classList.add('d-none');
-            });
-        }
-        
-        // PageSpeed events
         if (this.analyzePageSpeedBtn) {
             this.analyzePageSpeedBtn.addEventListener('click', () => this.analyzePageSpeed());
         }
@@ -257,34 +248,18 @@ class ImageConverter {
             });
         }
         
-        // ✅ FIXED: Device toggle buttons now auto-run PageSpeed on click
         if (this.deviceBtns) {
             this.deviceBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
-
-                    // Don't start a new run while one is in progress
-                    if (this.isAnalyzingPageSpeed) {
-                        return;
-                    }
-
-                    // Toggle active button styling
                     this.deviceBtns.forEach(b => b.classList.remove('active'));
                     e.currentTarget.classList.add('active');
-
-                    // Update strategy (mobile/desktop)
                     this.pagespeedStrategy = e.currentTarget.getAttribute('data-strategy');
-                    console.log('Strategy changed to:', this.pagespeedStrategy);
-
-                    // If we already have a URL, auto-run analysis
-                    if (this.pagespeedUrl && this.pagespeedUrl.value.trim()) {
-                        this.analyzePageSpeed();
-                    }
+                    this.displayCurrentStrategy();
                 });
             });
         }
         
-        // Close modals on background click
         [this.duplicateModal, this.presetModal].forEach(modal => {
             if (modal) {
                 modal.addEventListener('click', (e) => {
@@ -296,8 +271,155 @@ class ImageConverter {
         });
     }
 
+    async autoFetchChangelog() {
+        if (this.changelogCache && this.changelogCache.fetchedAt) {
+            const cacheAge = Date.now() - new Date(this.changelogCache.fetchedAt).getTime();
+            const oneHour = 60 * 60 * 1000;
+            
+            if (cacheAge < oneHour) {
+                console.log('📋 Using cached changelog');
+                this.renderChangelog(this.changelogCache.commits);
+                this.changelogFetched = true;
+                return;
+            }
+        }
+        
+        console.log('🔄 Fetching changelog...');
+        
+        this.changelogLoading.classList.remove('d-none');
+        this.changelogTimeline.innerHTML = '';
+        
+        try {
+            const [owner, repo] = this.githubRepo.split('/');
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=20`;
+            
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                throw new Error(`GitHub API returned ${response.status}`);
+            }
+            
+            const commits = await response.json();
+            
+            if (!commits || commits.length === 0) {
+                throw new Error('No commits found');
+            }
+            
+            this.saveChangelogCache({ commits, fetchedAt: new Date().toISOString() });
+            this.renderChangelog(commits);
+            this.changelogFetched = true;
+            
+            console.log('✅ Changelog updated');
+            
+        } catch (error) {
+            console.error('❌ Changelog error:', error);
+            
+            if (this.changelogCache && this.changelogCache.commits) {
+                console.log('📋 Showing cached changelog');
+                this.renderChangelog(this.changelogCache.commits);
+            } else {
+                this.changelogTimeline.innerHTML = `
+                    <div class="changelog-empty">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Failed to load changelog</p>
+                        <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">${error.message}</p>
+                    </div>
+                `;
+            }
+        } finally {
+            this.changelogLoading.classList.add('d-none');
+        }
+    }
 
-    // Notification System
+    renderChangelog(commits) {
+        if (!commits || commits.length === 0) {
+            this.changelogTimeline.innerHTML = `
+                <div class="changelog-empty">
+                    <i class="fas fa-inbox"></i>
+                    <p>No commits found</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const html = commits.map(commit => {
+            const date = new Date(commit.commit.author.date);
+            const formattedDate = date.toLocaleString();
+            const message = commit.commit.message.split('\n')[0];
+            const author = commit.commit.author.name;
+            const sha = commit.sha.substring(0, 7);
+            
+            const filesHTML = commit.files ? this.renderFileChanges(commit.files) : '';
+            
+            return `
+                <div class="commit-item">
+                    <div class="commit-header">
+                        <h4 class="commit-message">${this.escapeHtml(message)}</h4>
+                        <div class="commit-meta">
+                            <div class="commit-author">
+                                <i class="fas fa-user"></i>
+                                ${this.escapeHtml(author)}
+                            </div>
+                            <div class="commit-date">
+                                <i class="fas fa-calendar"></i>
+                                ${formattedDate}
+                            </div>
+                        </div>
+                    </div>
+                    ${filesHTML}
+                    <div class="commit-sha">
+                        <i class="fas fa-code-branch"></i>
+                        ${sha}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        this.changelogTimeline.innerHTML = html;
+    }
+
+    renderFileChanges(files) {
+        if (!files || files.length === 0) return '';
+        
+        const filesList = files.slice(0, 5).map(file => {
+            let statusClass = 'modified';
+            let icon = 'fa-edit';
+            
+            if (file.status === 'added') {
+                statusClass = 'added';
+                icon = 'fa-plus';
+            } else if (file.status === 'removed') {
+                statusClass = 'removed';
+                icon = 'fa-minus';
+            }
+            
+            return `
+                <span class="file-badge ${statusClass}">
+                    <i class="fas ${icon}"></i>
+                    ${file.filename}
+                </span>
+            `;
+        }).join('');
+        
+        const moreFiles = files.length > 5 ? `<span class="file-badge">+${files.length - 5} more</span>` : '';
+        
+        return `
+            <div class="commit-files">
+                <div class="commit-files-title">Files changed:</div>
+                <div class="file-list">
+                    ${filesList}
+                    ${moreFiles}
+                </div>
+            </div>
+        `;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     initializeNotifications() {
         const notificationCenter = document.getElementById('notificationsCenter');
         const closeNotificationBtn = document.getElementById('closeNotification');
@@ -349,6 +471,8 @@ class ImageConverter {
         
         if (targetNav) targetNav.classList.add('active');
         if (targetSection) targetSection.classList.add('active');
+        
+        this.saveCurrentSection(sectionName);
     }
 
     updateSidebarStats() {
@@ -1465,10 +1589,6 @@ class ImageConverter {
         this.renderPresets();
     }
 
-    // ===========================================
-    // PAGESPEED INSIGHTS - WITH ALL NEW FEATURES
-    // ===========================================
-
     loadPreviousPageSpeed() {
         const stored = localStorage.getItem('previousPageSpeed');
         return stored ? JSON.parse(stored) : null;
@@ -1478,10 +1598,28 @@ class ImageConverter {
         localStorage.setItem('previousPageSpeed', JSON.stringify(data));
     }
 
+    displayCurrentStrategy() {
+        const data = this.currentPageSpeedData[this.pagespeedStrategy];
+        
+        if (!data) {
+            this.pagespeedResults.innerHTML = `
+                <div class="metrics-section">
+                    <h3 style="color: white;"><i class="fas fa-info-circle me-2"></i>No Data Available</h3>
+                    <p style="text-align: center; color: rgba(255,255,255,0.8);">
+                        ${this.pagespeedStrategy === 'mobile' ? 'Mobile' : 'Desktop'} data not yet analyzed.
+                        Please run an analysis first.
+                    </p>
+                </div>
+            `;
+            this.pagespeedResults.classList.remove('d-none');
+            return;
+        }
+        
+        this.displayPageSpeedResults(data, this.pagespeedStrategy);
+    }
+
     async analyzePageSpeed() {
         if (!this.pagespeedUrl) return;
-
-        // Avoid double-runs if the user clicks very fast
         if (this.isAnalyzingPageSpeed) return;
         
         const url = this.pagespeedUrl.value.trim();
@@ -1498,58 +1636,87 @@ class ImageConverter {
             return;
         }
         
-        // Mark as analyzing so we don't spam requests
         this.isAnalyzingPageSpeed = true;
         
-        // Log current strategy (mobile/desktop)
-        console.log('🔍 Analyzing with strategy:', this.pagespeedStrategy);
+        console.log('🚀 Starting SIMULTANEOUS mobile + desktop analysis');
         
         this.pagespeedLoading.classList.remove('d-none');
         this.pagespeedResults.classList.add('d-none');
         this.analyzePageSpeedBtn.disabled = true;
-        this.analyzePageSpeedBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Analyzing ${this.pagespeedStrategy === 'mobile' ? 'Mobile' : 'Desktop'}...`;
+        this.analyzePageSpeedBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Analyzing Both...`;
+        
+        this.pagespeedLoading.innerHTML = `
+            <div style="text-align: center; padding: 3rem;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;"></i>
+                <p style="color: rgba(255, 255, 255, 0.8); font-size: 1.1rem; margin-bottom: 0.5rem;">
+                    Analyzing Performance...
+                </p>
+                <div style="display: flex; gap: 2rem; justify-content: center; margin-top: 1.5rem;">
+                    <div style="padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 10px; min-width: 120px;">
+                        <i class="fas fa-mobile-alt" style="font-size: 2rem; color: #667eea; margin-bottom: 0.5rem;"></i>
+                        <div style="color: rgba(255,255,255,0.9); font-weight: 600;">Mobile</div>
+                        <div id="mobileStatus" style="color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-top: 0.3rem;">Loading...</div>
+                    </div>
+                    <div style="padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 10px; min-width: 120px;">
+                        <i class="fas fa-desktop" style="font-size: 2rem; color: #667eea; margin-bottom: 0.5rem;"></i>
+                        <div style="color: rgba(255,255,255,0.9); font-weight: 600;">Desktop</div>
+                        <div id="desktopStatus" style="color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-top: 0.3rem;">Loading...</div>
+                    </div>
+                </div>
+                <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-top: 1.5rem;">
+                    This may take 20-30 seconds...
+                </p>
+            </div>
+        `;
         
         try {
-            // 🔥 NEW: call your Cloudflare Worker instead of Google directly
             const workerBaseUrl = 'https://pagespeed-insights.can-akcam.workers.dev';
-            const apiUrl = `${workerBaseUrl}?url=${encodeURIComponent(url)}&strategy=${this.pagespeedStrategy}`;
             
-            console.log('📡 Worker URL:', apiUrl);
+            const [mobileResponse, desktopResponse] = await Promise.all([
+                fetch(`${workerBaseUrl}?url=${encodeURIComponent(url)}&strategy=mobile`).then(res => {
+                    const status = document.getElementById('mobileStatus');
+                    if (status) status.textContent = '✓ Complete';
+                    return res.json();
+                }),
+                fetch(`${workerBaseUrl}?url=${encodeURIComponent(url)}&strategy=desktop`).then(res => {
+                    const status = document.getElementById('desktopStatus');
+                    if (status) status.textContent = '✓ Complete';
+                    return res.json();
+                })
+            ]);
             
-            const response = await fetch(apiUrl);
-            const data = await response.json();
+            console.log('✅ Both analyses complete');
             
-            console.log('✅ PageSpeed response received from Worker');
-            console.log('📊 Strategy from API:', data.lighthouseResult?.configSettings?.formFactor);
-            
-            if (data.error) {
-                throw new Error(data.error.message || data.error || 'Failed to analyze URL');
+            if (mobileResponse.error || desktopResponse.error) {
+                throw new Error(mobileResponse.error?.message || desktopResponse.error?.message || 'Failed to analyze');
             }
             
-            if (!data.lighthouseResult) {
+            if (!mobileResponse.lighthouseResult || !desktopResponse.lighthouseResult) {
                 throw new Error('No lighthouse results in response');
             }
             
-            // Store current results with strategy info
-            this.currentPageSpeedData = {
+            this.currentPageSpeedData.mobile = mobileResponse;
+            this.currentPageSpeedData.desktop = desktopResponse;
+            
+            this.displayPageSpeedResults(
+                this.currentPageSpeedData[this.pagespeedStrategy],
+                this.pagespeedStrategy
+            );
+            
+            const currentData = {
                 url: url,
                 strategy: this.pagespeedStrategy,
                 timestamp: new Date().toISOString(),
-                scores: {
-                    performance: data.lighthouseResult.categories.performance?.score ? Math.round(data.lighthouseResult.categories.performance.score * 100) : 0,
-                    accessibility: data.lighthouseResult.categories.accessibility?.score ? Math.round(data.lighthouseResult.categories.accessibility.score * 100) : 0,
-                    bestPractices: data.lighthouseResult.categories['best-practices']?.score ? Math.round(data.lighthouseResult.categories['best-practices'].score * 100) : 0,
-                    seo: data.lighthouseResult.categories.seo?.score ? Math.round(data.lighthouseResult.categories.seo.score * 100) : 0
-                },
-                audits: data.lighthouseResult.audits
+                scores: this.extractScores(this.currentPageSpeedData[this.pagespeedStrategy])
             };
             
-            this.displayPageSpeedResults(data);
+            this.savePreviousPageSpeed(currentData);
+            this.previousPageSpeedResults = currentData;
             
         } catch (error) {
-            console.error('❌ PageSpeed error (via Worker):', error);
+            console.error('❌ PageSpeed error:', error);
             
-            const errorMessage = error.message || 'Unknown error while analyzing PageSpeed';
+            const errorMessage = error.message || 'Unknown error';
             
             this.pagespeedResults.innerHTML = `
                 <div class="metrics-section">
@@ -1559,10 +1726,10 @@ class ImageConverter {
                     <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
                         <h4 style="font-size: 1rem; margin-bottom: 0.5rem; color: white;">Troubleshooting Tips:</h4>
                         <ul style="text-align: left; color: rgba(255, 255, 255, 0.8); line-height: 1.8;">
-                            <li>Make sure the URL is publicly accessible (not behind a login)</li>
+                            <li>Make sure the URL is publicly accessible</li>
                             <li>Try with "https://" instead of "http://"</li>
                             <li>Verify the website is online and responding</li>
-                            <li>Check if the URL is complete (including domain extension)</li>
+                            <li>Check if the URL is complete</li>
                         </ul>
                     </div>
                     
@@ -1582,14 +1749,21 @@ class ImageConverter {
         }
     }
 
+    extractScores(data) {
+        const categories = data.lighthouseResult.categories;
+        return {
+            performance: categories.performance?.score ? Math.round(categories.performance.score * 100) : 0,
+            accessibility: categories.accessibility?.score ? Math.round(categories.accessibility.score * 100) : 0,
+            bestPractices: categories['best-practices']?.score ? Math.round(categories['best-practices'].score * 100) : 0,
+            seo: categories.seo?.score ? Math.round(categories.seo.score * 100) : 0
+        };
+    }
 
-
-    // NEW: Updated color scheme
     getScoreClass(score) {
-        if (score === 100) return 'perfect'; // Gold
-        if (score >= 90) return 'good';       // Green
-        if (score >= 50) return 'average';    // Orange
-        return 'poor';                         // Red
+        if (score === 100) return 'perfect';
+        if (score >= 90) return 'good';
+        if (score >= 50) return 'average';
+        return 'poor';
     }
 
     getMetricClass(score) {
@@ -1598,12 +1772,12 @@ class ImageConverter {
         return 'poor';
     }
 
-    // NEW: Calculate score difference
     getScoreDifference(category) {
-        if (!this.previousPageSpeedResults || !this.currentPageSpeedData) return null;
+        if (!this.previousPageSpeedResults) return null;
         
+        const currentScores = this.extractScores(this.currentPageSpeedData[this.pagespeedStrategy]);
         const prev = this.previousPageSpeedResults.scores[category];
-        const curr = this.currentPageSpeedData.scores[category];
+        const curr = currentScores[category];
         
         if (prev === undefined || curr === undefined) return null;
         
@@ -1615,7 +1789,7 @@ class ImageConverter {
         };
     }
 
-    displayPageSpeedResults(data) {
+    displayPageSpeedResults(data, strategy) {
         try {
             const lighthouse = data.lighthouseResult;
             
@@ -1654,22 +1828,24 @@ class ImageConverter {
                 return `<div class="score-change" style="background: ${color};">${sign}${diff.value}</div>`;
             };
             
-            // Get device emoji
-            const deviceIcon = this.pagespeedStrategy === 'mobile' ? '📱' : '🖥️';
-            const deviceName = this.pagespeedStrategy === 'mobile' ? 'Mobile' : 'Desktop';
+            const deviceIcon = strategy === 'mobile' ? '📱' : '🖥️';
+            const deviceName = strategy === 'mobile' ? 'Mobile' : 'Desktop';
+            
+            const mobileAvailable = this.currentPageSpeedData.mobile !== null;
+            const desktopAvailable = this.currentPageSpeedData.desktop !== null;
             
             const html = `
-                <!-- Device Indicator -->
                 <div class="device-indicator" style="text-align: center; margin-bottom: 2rem; padding: 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 12px;">
                     <h3 style="color: white; font-size: 1.3rem; margin: 0;">
                         ${deviceIcon} ${deviceName} Performance
                     </h3>
                     <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin: 0.5rem 0 0 0;">
-                        Switch device type above again to analyze
+                        ${mobileAvailable && desktopAvailable ? 
+                            '✓ Click device buttons above to switch instantly' : 
+                            'Click "Analyze" to get both mobile and desktop results'}
                     </p>
                 </div>
                 
-                <!-- Action Buttons Row -->
                 <div class="pagespeed-actions">
                     ${this.previousPageSpeedResults ? `
                         <button class="btn-action" onclick="converter.showComparison()">
@@ -1771,7 +1947,6 @@ class ImageConverter {
                     </div>
                 ` : '<div class="metrics-section"><p style="text-align: center; color: rgba(255,255,255,0.8);"><i class="fas fa-check-circle me-2"></i>No major optimization opportunities found!</p></div>'}
                 
-                <!-- ChatGPT Button -->
                 <div class="chatgpt-section">
                     <button class="btn-chatgpt" onclick="converter.openChatGPT('octobercms')">
                         <i class="fas fa-comments me-2"></i>Chat with AI about OctoberCMS Optimization
@@ -1785,32 +1960,27 @@ class ImageConverter {
             this.pagespeedResults.innerHTML = html;
             this.pagespeedResults.classList.remove('d-none');
             
-            this.savePreviousPageSpeed(this.currentPageSpeedData);
-            this.previousPageSpeedResults = this.currentPageSpeedData;
-            
         } catch (error) {
             console.error('Error displaying PageSpeed results:', error);
             this.pagespeedResults.innerHTML = `
                 <div class="metrics-section">
                     <h3 style="color: white;"><i class="fas fa-exclamation-triangle me-2"></i>Display Error</h3>
                     <p style="color: #ff6b6b; text-align: center;">Failed to display PageSpeed results</p>
-                    <p style="text-align: center; color: rgba(255,255,255,0.8);">The API returned data in an unexpected format.</p>
                 </div>
             `;
             this.pagespeedResults.classList.remove('d-none');
         }
     }
 
-    // NEW: Show comparison modal
     showComparison() {
-        if (!this.previousPageSpeedResults || !this.currentPageSpeedData) return;
+        if (!this.previousPageSpeedResults) return;
         
         const modal = document.createElement('div');
         modal.className = 'duplicate-modal';
         modal.style.display = 'flex';
         
         const prev = this.previousPageSpeedResults;
-        const curr = this.currentPageSpeedData;
+        const curr = this.extractScores(this.currentPageSpeedData[this.pagespeedStrategy]);
         
         const compareRow = (label, prevVal, currVal) => {
             const diff = currVal - prevVal;
@@ -1845,10 +2015,10 @@ class ImageConverter {
                             </tr>
                         </thead>
                         <tbody>
-                            ${compareRow('Performance', prev.scores.performance, curr.scores.performance)}
-                            ${compareRow('Accessibility', prev.scores.accessibility, curr.scores.accessibility)}
-                            ${compareRow('Best Practices', prev.scores.bestPractices, curr.scores.bestPractices)}
-                            ${compareRow('SEO', prev.scores.seo, curr.scores.seo)}
+                            ${compareRow('Performance', prev.scores.performance, curr.performance)}
+                            ${compareRow('Accessibility', prev.scores.accessibility, curr.accessibility)}
+                            ${compareRow('Best Practices', prev.scores.bestPractices, curr.bestPractices)}
+                            ${compareRow('SEO', prev.scores.seo, curr.seo)}
                         </tbody>
                     </table>
                 </div>
@@ -1868,9 +2038,8 @@ class ImageConverter {
         });
     }
 
-    // NEW: Show optimization tips
     showOptimizationTips(platform) {
-        if (!this.currentPageSpeedData) {
+        if (!this.currentPageSpeedData[this.pagespeedStrategy]) {
             alert('Please run a PageSpeed analysis first!');
             return;
         }
@@ -1879,7 +2048,7 @@ class ImageConverter {
         modal.className = 'duplicate-modal';
         modal.style.display = 'flex';
         
-        const audits = this.currentPageSpeedData.audits;
+        const audits = this.currentPageSpeedData[this.pagespeedStrategy].lighthouseResult.audits;
         const opportunities = Object.values(audits)
             .filter(audit => audit && audit.details && audit.details.type === 'opportunity' && audit.score !== null && audit.score < 1)
             .sort((a, b) => (b.details?.overallSavingsMs || 0) - (a.details?.overallSavingsMs || 0));
@@ -1890,11 +2059,11 @@ class ImageConverter {
             <div class="duplicate-modal-content" style="max-width: 900px; max-height: 80vh; overflow-y: auto;">
                 <button class="close-modal">&times;</button>
                 <div class="modal-header">
-                    <h3 style="color: white;">
+                    <h3 style="color: #333;">
                         <i class="fab fa-${platform === 'octobercms' ? 'laravel' : 'wordpress'} me-2"></i>
                         ${platform === 'octobercms' ? 'OctoberCMS' : 'WordPress'} Optimization Tips (2025)
                     </h3>
-                    <p style="color: rgba(255,255,255,0.7);">Best practices and plugins for your PageSpeed issues</p>
+                    <p style="color: #666;">Best practices and plugins for your PageSpeed issues</p>
                 </div>
                 <div style="margin-top: 2rem;">
                     ${tips}
@@ -1915,7 +2084,6 @@ class ImageConverter {
         });
     }
 
-    // NEW: OctoberCMS specific tips
     getOctoberCMSTips(opportunities) {
         let html = '<div class="tips-container">';
         
@@ -1925,7 +2093,6 @@ class ImageConverter {
             
             let tip = '';
             
-            // Image optimization
             if (title.toLowerCase().includes('image') || title.toLowerCase().includes('next-gen')) {
                 tip = `
                     <div class="tip-card">
@@ -1944,7 +2111,6 @@ class ImageConverter {
                 `;
             }
             
-            // Render-blocking resources
             else if (title.toLowerCase().includes('render-blocking') || title.toLowerCase().includes('css') || title.toLowerCase().includes('javascript')) {
                 tip = `
                     <div class="tip-card">
@@ -1963,7 +2129,6 @@ class ImageConverter {
                 `;
             }
             
-            // Caching
             else if (title.toLowerCase().includes('cache') || title.toLowerCase().includes('browser caching')) {
                 tip = `
                     <div class="tip-card">
@@ -1982,7 +2147,6 @@ class ImageConverter {
                 `;
             }
             
-            // Text compression
             else if (title.toLowerCase().includes('text compression') || title.toLowerCase().includes('gzip')) {
                 tip = `
                     <div class="tip-card">
@@ -1991,10 +2155,7 @@ class ImageConverter {
                         <div class="tip-solution">
                             <strong>OctoberCMS Solution:</strong>
                             <ul>
-                                <li><strong>Enable Gzip:</strong> Add to .htaccess:
-                                    <pre style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem;">
-AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript</pre>
-                                </li>
+                                <li><strong>Enable Gzip:</strong> Add to .htaccess</li>
                                 <li><strong>Brotli Compression:</strong> Enable via server config (Nginx/Apache)</li>
                                 <li><strong>Minification:</strong> Use October's built-in asset minification</li>
                             </ul>
@@ -2003,7 +2164,6 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
                 `;
             }
             
-            // Unused CSS/JS
             else if (title.toLowerCase().includes('unused css') || title.toLowerCase().includes('unused javascript')) {
                 tip = `
                     <div class="tip-card">
@@ -2025,18 +2185,19 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
             if (tip) html += tip;
         });
         
-        // General tips always shown
         html += `
             <div class="tip-card general-tips">
                 <h4><i class="fas fa-star me-2"></i>General OctoberCMS Performance Tips (2025)</h4>
-                <ul>
-                    <li><strong>PHP 8.3:</strong> Upgrade to PHP 8.3 for 20-30% performance boost</li>
-                    <li><strong>OPcache:</strong> Enable OPcache in php.ini</li>
-                    <li><strong>Database Indexing:</strong> Add indexes to frequently queried columns</li>
-                    <li><strong>CDN:</strong> Use Cloudflare or BunnyCDN for static assets</li>
-                    <li><strong>Eager Loading:</strong> Use <code>->with()</code> to prevent N+1 queries</li>
-                    <li><strong>Queue Jobs:</strong> Move heavy tasks to queues</li>
-                </ul>
+                <div class="tip-solution">
+                    <ul>
+                        <li><strong>PHP 8.3:</strong> Upgrade to PHP 8.3 for 20-30% performance boost</li>
+                        <li><strong>OPcache:</strong> Enable OPcache in php.ini</li>
+                        <li><strong>Database Indexing:</strong> Add indexes to frequently queried columns</li>
+                        <li><strong>CDN:</strong> Use Cloudflare or BunnyCDN for static assets</li>
+                        <li><strong>Eager Loading:</strong> Use <code>->with()</code> to prevent N+1 queries</li>
+                        <li><strong>Queue Jobs:</strong> Move heavy tasks to queues</li>
+                    </ul>
+                </div>
             </div>
         `;
         
@@ -2044,7 +2205,6 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
         return html;
     }
 
-    // NEW: WordPress specific tips
     getWordPressTips(opportunities) {
         let html = '<div class="tips-container">';
         
@@ -2054,7 +2214,6 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
             
             let tip = '';
             
-            // Image optimization
             if (title.toLowerCase().includes('image') || title.toLowerCase().includes('next-gen')) {
                 tip = `
                     <div class="tip-card">
@@ -2073,7 +2232,6 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
                 `;
             }
             
-            // Render-blocking resources
             else if (title.toLowerCase().includes('render-blocking') || title.toLowerCase().includes('css') || title.toLowerCase().includes('javascript')) {
                 tip = `
                     <div class="tip-card">
@@ -2092,7 +2250,6 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
                 `;
             }
             
-            // Caching
             else if (title.toLowerCase().includes('cache') || title.toLowerCase().includes('browser caching')) {
                 tip = `
                     <div class="tip-card">
@@ -2111,7 +2268,6 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
                 `;
             }
             
-            // Text compression
             else if (title.toLowerCase().includes('text compression') || title.toLowerCase().includes('gzip')) {
                 tip = `
                     <div class="tip-card">
@@ -2130,7 +2286,6 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
                 `;
             }
             
-            // Unused CSS/JS
             else if (title.toLowerCase().includes('unused css') || title.toLowerCase().includes('unused javascript')) {
                 tip = `
                     <div class="tip-card">
@@ -2152,19 +2307,20 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
             if (tip) html += tip;
         });
         
-        // General tips always shown
         html += `
             <div class="tip-card general-tips">
                 <h4><i class="fas fa-star me-2"></i>General WordPress Performance Tips (2025)</h4>
-                <ul>
-                    <li><strong>PHP 8.3:</strong> Upgrade to PHP 8.3 for massive performance gains</li>
-                    <li><strong>Managed Hosting:</strong> Use Kinsta, WP Engine, or Cloudways</li>
-                    <li><strong>CDN:</strong> Cloudflare (Free) or BunnyCDN ($1/mo)</li>
-                    <li><strong>Database Optimization:</strong> WP-Optimize (Free) - Clean up revisions, spam</li>
-                    <li><strong>Limit Plugins:</strong> Deactivate unused plugins, quality over quantity</li>
-                    <li><strong>Theme Choice:</strong> Use lightweight themes like GeneratePress or Astra</li>
-                    <li><strong>Heartbeat Control:</strong> Limit WP Heartbeat API frequency</li>
-                </ul>
+                <div class="tip-solution">
+                    <ul>
+                        <li><strong>PHP 8.3:</strong> Upgrade to PHP 8.3 for massive performance gains</li>
+                        <li><strong>Managed Hosting:</strong> Use Kinsta, WP Engine, or Cloudways</li>
+                        <li><strong>CDN:</strong> Cloudflare (Free) or BunnyCDN ($1/mo)</li>
+                        <li><strong>Database Optimization:</strong> WP-Optimize (Free) - Clean up revisions, spam</li>
+                        <li><strong>Limit Plugins:</strong> Deactivate unused plugins, quality over quantity</li>
+                        <li><strong>Theme Choice:</strong> Use lightweight themes like GeneratePress or Astra</li>
+                        <li><strong>Heartbeat Control:</strong> Limit WP Heartbeat API frequency</li>
+                    </ul>
+                </div>
             </div>
         `;
         
@@ -2172,17 +2328,15 @@ AddOutputFilterByType DEFLATE text/html text/css text/javascript application/jav
         return html;
     }
 
-    // NEW: Open ChatGPT with context
     openChatGPT(platform) {
-        if (!this.currentPageSpeedData) {
+        if (!this.currentPageSpeedData[this.pagespeedStrategy]) {
             alert('Please run a PageSpeed analysis first!');
             return;
         }
         
-        const scores = this.currentPageSpeedData.scores;
-        const audits = this.currentPageSpeedData.audits;
+        const scores = this.extractScores(this.currentPageSpeedData[this.pagespeedStrategy]);
+        const audits = this.currentPageSpeedData[this.pagespeedStrategy].lighthouseResult.audits;
         
-        // Get top 5 issues
         const issues = Object.values(audits)
             .filter(audit => audit && audit.score !== null && audit.score < 0.9)
             .sort((a, b) => a.score - b.score)
@@ -2202,8 +2356,7 @@ SEO: ${scores.seo}/100
 Top issues identified:
 ${issues}
 
-Device: ${this.currentPageSpeedData.strategy}
-URL: ${this.currentPageSpeedData.url}
+Device: ${this.pagespeedStrategy}
 
 Can you provide specific, actionable steps to improve these scores for a ${platformName} website in 2025? Please include:
 1. Free and premium plugin recommendations
@@ -2211,77 +2364,7 @@ Can you provide specific, actionable steps to improve these scores for a ${platf
 3. Hosting/server optimization tips
 4. Priority order (what to fix first)`);
         
-        // Open ChatGPT with pre-filled prompt
         window.open(`https://chat.openai.com/?q=${prompt}`, '_blank');
-    }
-
-    showChangelog(file) {
-        this.changelogViewer.classList.remove('d-none');
-        
-        const titles = {
-            'html': 'HTML Changes',
-            'scss': 'SCSS Changes',
-            'js': 'JavaScript Changes'
-        };
-        
-        this.changelogTitle.textContent = titles[file] || 'Changes';
-        
-        const changes = {
-            'html': {
-                old: `<!-- OLD VERSION -->
-<!-- No PageSpeed section -->`,
-                new: `<!-- NEW VERSION -->
-<!-- PageSpeed Insights Section -->
-<div class="content-section" id="pagespeedSection">
-    <input type="url" id="pagespeedUrl">
-    <button class="btn-custom" id="analyzePageSpeedBtn">Analyze</button>
-    <!-- Comparison, Platform Tips, ChatGPT Integration -->
-</div>`
-            },
-            'scss': {
-                old: `// OLD VERSION
-// Basic PageSpeed styles`,
-                new: `// NEW VERSION - Enhanced Colors & Features
-.score-circle {
-    &.perfect { background: linear-gradient(135deg, #FFD700, #FFA500); } // Gold
-    &.good { background: linear-gradient(135deg, #10b981, #059669); }    // Green
-    &.average { background: linear-gradient(135deg, #f59e0b, #d97706); } // Orange
-    &.poor { background: linear-gradient(135deg, #ef4444, #dc2626); }    // Red
-}
-.score-change { 
-    position: absolute; 
-    top: -10px; 
-    right: -10px; 
-    width: 35px; 
-    height: 35px; 
-    border-radius: 50%; 
-    color: white; 
-    font-size: 0.9rem; 
-    font-weight: bold; 
-}
-.tip-card { 
-    background: rgba(255,255,255,0.05); 
-    padding: 1.5rem; 
-    border-radius: 12px; 
-    margin-bottom: 1.5rem; 
-}`
-            },
-            'js': {
-                old: `// OLD VERSION - Basic PageSpeed`,
-                new: `// NEW VERSION - Full Features
-- Fixed device toggle (mobile/desktop)
-- New color scheme (gold, green, orange, red)
-- White text for better readability
-- Comparison tracking with +/- badges
-- OctoberCMS & WordPress optimization tips
-- ChatGPT integration with context
-- Platform-specific plugin recommendations
-- 2025 best practices`
-            }
-        };
-        
-        this.changelogOld.textContent = changes[file].old;
-        this.changelogNew.textContent = changes[file].new;
     }
 
     saveToHistory() {
@@ -2382,7 +2465,6 @@ Can you provide specific, actionable steps to improve these scores for a ${platf
     }
 }
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     window.converter = new ImageConverter();
     

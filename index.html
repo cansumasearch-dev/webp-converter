@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebP Converter Pro v2.0</title>
+    <link rel="icon" type="image/x-icon" href="./fav-icon.png">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -23,23 +24,20 @@
             <i class="fas fa-bell"></i>
         </div>
         <div class="notification-content">
-            <h4>What's New! 🎉</h4>
+            <h4>Latest Update! 🚀</h4>
             <p>
-                I just added PageSpeed Insights! <br>
-                There will be some PageSpeed Insights tools too soon.
-                Please make sure to check it out! If you have any suggestions for me to add to the website, make sure to tell me ʕ•ᴥ•ʔ
-                <br> <br>
-                <b>NEW:</b> 
-                Massive Pagespeed Insights Update!!!! <br>
-                <b>NEW UI, NEW UX<br></b>
-                <b>- Added that you can chat with chatgpt about your pagespeed. <br>
-                - Added Previous Score comparison <br>
-                - Added loss or gain on scores <br>
-                - Added OctoberCMS and Wordpress Tips! <br>
-                - Changed Performance Colors <br>
-                - Changed other minor stylings <br>
-                - Removed accidental leaked API Key <br>
-                - Added new way to integrate API Key to make it more safe ʕ•ᴥ•ʔ</b>
+                <strong>Automatic GitHub Changelog Added!</strong><br>
+                Now you can track all code changes automatically from GitHub. Plus, PageSpeed Insights now analyzes both mobile AND desktop simultaneously!
+                <br><br>
+                <b>What's New:</b><br>
+                • GitHub integration for automatic changelog<br>
+                • Simultaneous mobile + desktop PageSpeed analysis<br>
+                • Instant device switching (no re-analysis needed)<br>
+                • Page persistence (stays on last viewed section)<br>
+                • Live Preview now only visible on converter page<br>
+                • Added Favion<br>
+                <br>
+                Check out the Changelog section to see all changes! ʕ•ᴥ•ʔ
             </p>
         </div>
     </div>
@@ -417,48 +415,50 @@
                 </div>
             </div>
 
+            <!-- Changelog Section -->
             <div class="content-section" id="changelogSection">
                 <div class="section-header-centered">
-                    <h2><i class="fas fa-code-branch me-3"></i>Changelog</h2>
-                    <p>View all code changes and updates</p>
+                    <h2><i class="fas fa-code-branch me-2"></i>Changelog</h2>
+                    <p>Latest updates and changes</p>
                 </div>
-                
-                <div class="changelog-container">
-                    <div class="changelog-buttons">
-                        <button class="changelog-btn" data-file="html">
-                            <i class="fas fa-code me-2"></i>HTML Changes
-                        </button>
-                        <button class="changelog-btn" data-file="scss">
-                            <i class="fas fa-palette me-2"></i>SCSS Changes
-                        </button>
-                        <button class="changelog-btn" data-file="js">
-                            <i class="fab fa-js-square me-2"></i>JavaScript Changes
-                        </button>
+
+                <!-- Loading State -->
+                <div id="changelogLoading" class="d-none" style="text-align: center; padding: 3rem;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;"></i>
+                    <p style="color: rgba(255, 255, 255, 0.8);">Loading latest changes...</p>
+                </div>
+
+                <!-- Changelog Timeline -->
+                <div id="changelogTimeline" class="changelog-timeline">
+                    <!-- Will be populated automatically -->
+                </div>
+
+                <!-- Old Notifications Archive -->
+                <div class="old-notifications-section">
+                    <h3><i class="fas fa-archive me-2"></i>Notification Archive</h3>
+                    <div class="notification-archive-card">
+                        <div class="archive-date">Previous Update</div>
+                        <h4>Massive PageSpeed Insights Update! 🎉</h4>
+                        <ul>
+                            <li>Chat with ChatGPT about your PageSpeed results</li>
+                            <li>Previous Score comparison feature</li>
+                            <li>Visual indicators for score gains/losses</li>
+                            <li>OctoberCMS and WordPress optimization tips</li>
+                            <li>New performance color scheme</li>
+                            <li>Enhanced UI/UX improvements</li>
+                            <li>Secure API Key integration via Cloudflare Worker</li>
+                            <li><small>Added Favicon</small></li>
+                        </ul>
                     </div>
                     
-                    <div class="changelog-viewer d-none" id="changelogViewer">
-                        <div class="changelog-header">
-                            <h3 id="changelogTitle">Changes</h3>
-                            <button class="btn-changelog-close" id="closeChangelog">
-                                <i class="fas fa-times me-2"></i>Close
-                            </button>
-                        </div>
-                        <div class="changelog-content">
-                            <div class="changelog-split">
-                                <div class="changelog-side old">
-                                    <div class="side-label">
-                                        <i class="fas fa-minus-circle me-2"></i>Removed
-                                    </div>
-                                    <pre id="changelogOld"></pre>
-                                </div>
-                                <div class="changelog-side new">
-                                    <div class="side-label">
-                                        <i class="fas fa-plus-circle me-2"></i>Added
-                                    </div>
-                                    <pre id="changelogNew"></pre>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="notification-archive-card">
+                        <div class="archive-date">Initial Release</div>
+                        <h4>PageSpeed Insights Feature Added! 🚀</h4>
+                        <ul>
+                            <li>Analyze website performance with Google PageSpeed Insights</li>
+                            <li>Get detailed metrics and optimization suggestions</li>
+                            <li>Mobile and Desktop analysis support</li>
+                        </ul>
                     </div>
                 </div>
             </div>
