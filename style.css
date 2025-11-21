@@ -3197,3 +3197,215 @@ body::before {
 .changelog-empty p {
   font-size: 1.1rem;
 }
+
+/* Code Diff Styles */
+.commit-code-changes {
+  margin-top: 1.5rem;
+}
+
+.code-diff-file {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.code-file-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.file-info i {
+  color: #667eea;
+  font-size: 1.2rem;
+}
+
+.file-name {
+  color: white;
+  font-weight: 600;
+  font-family: "Courier New", monospace;
+}
+
+.file-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.file-status-badge.added {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.file-status-badge.removed {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.file-status-badge.modified {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.file-stats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.additions {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.deletions {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.toggle-diff-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.2s;
+}
+
+.toggle-diff-btn:hover {
+  color: white;
+}
+
+.code-diff-content {
+  background: #1a1a1a;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+
+.diff-table {
+  width: 100%;
+}
+
+.diff-line {
+  display: grid;
+  grid-template-columns: 50px 50px 1fr;
+  line-height: 1.6;
+  min-height: 24px;
+}
+
+.diff-line.added {
+  background: rgba(16, 185, 129, 0.15);
+  border-left: 3px solid #10b981;
+}
+
+.diff-line.removed {
+  background: rgba(239, 68, 68, 0.15);
+  border-left: 3px solid #ef4444;
+}
+
+.diff-line.context {
+  background: transparent;
+  border-left: 3px solid transparent;
+}
+
+.line-num {
+  color: rgba(255, 255, 255, 0.3);
+  text-align: right;
+  padding: 0 0.5rem;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+  font-size: 0.75rem;
+}
+
+.line-content {
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0 1rem;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.diff-marker {
+  color: rgba(255, 255, 255, 0.5);
+  margin-right: 0.5rem;
+}
+
+.diff-line.added .diff-marker {
+  color: #10b981;
+}
+
+.diff-line.removed .diff-marker {
+  color: #ef4444;
+}
+
+.diff-hunk-header {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.no-code-changes,
+.no-diff {
+  padding: 2rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Commit item adjustments */
+.commit-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.commit-header {
+  margin-bottom: 1rem;
+}
+
+.commit-message {
+  color: white;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.commit-meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.commit-author,
+.commit-date,
+.commit-sha {
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.commit-sha {
+  font-family: "Courier New", monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+}

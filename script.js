@@ -291,7 +291,7 @@ class ImageConverter {
         
         try {
             const [owner, repo] = this.githubRepo.split('/');
-            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=20`;
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`;
             
             const response = await fetch(apiUrl);
             
@@ -305,8 +305,16 @@ class ImageConverter {
                 throw new Error('No commits found');
             }
             
-            this.saveChangelogCache({ commits, fetchedAt: new Date().toISOString() });
-            this.renderChangelog(commits);
+            // Fetch detailed commit data with patches
+            const detailedCommits = await Promise.all(
+                commits.map(async commit => {
+                    const detailResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}`);
+                    return await detailResponse.json();
+                })
+            );
+            
+            this.saveChangelogCache({ commits: detailedCommits, fetchedAt: new Date().toISOString() });
+            this.renderChangelog(detailedCommits);
             this.changelogFetched = true;
             
             console.log('✅ Changelog updated');
@@ -342,14 +350,14 @@ class ImageConverter {
             return;
         }
         
-        const html = commits.map(commit => {
+        const html = commits.map((commit, index) => {
             const date = new Date(commit.commit.author.date);
             const formattedDate = date.toLocaleString();
             const message = commit.commit.message.split('\n')[0];
             const author = commit.commit.author.name;
             const sha = commit.sha.substring(0, 7);
             
-            const filesHTML = commit.files ? this.renderFileChanges(commit.files) : '';
+            const filesHTML = commit.files ? this.renderCodeDiffs(commit.files, index) : '';
             
             return `
                 <div class="commit-item">
@@ -364,13 +372,13 @@ class ImageConverter {
                                 <i class="fas fa-calendar"></i>
                                 ${formattedDate}
                             </div>
+                            <div class="commit-sha">
+                                <i class="fas fa-code-branch"></i>
+                                ${sha}
+                            </div>
                         </div>
                     </div>
                     ${filesHTML}
-                    <div class="commit-sha">
-                        <i class="fas fa-code-branch"></i>
-                        ${sha}
-                    </div>
                 </div>
             `;
         }).join('');
@@ -378,40 +386,144 @@ class ImageConverter {
         this.changelogTimeline.innerHTML = html;
     }
 
-    renderFileChanges(files) {
+    renderCodeDiffs(files, commitIndex) {
         if (!files || files.length === 0) return '';
         
-        const filesList = files.slice(0, 5).map(file => {
-            let statusClass = 'modified';
-            let icon = 'fa-edit';
+        // Filter only HTML, CSS, SCSS, JS files
+        const codeFiles = files.filter(file => {
+            const ext = file.filename.split('.').pop().toLowerCase();
+            return ['html', 'css', 'scss', 'js', 'jsx', 'ts', 'tsx'].includes(ext);
+        });
+        
+        if (codeFiles.length === 0) {
+            return `<div class="no-code-changes">No code file changes in this commit</div>`;
+        }
+        
+        const filesHTML = codeFiles.map((file, fileIndex) => {
+            const ext = file.filename.split('.').pop().toLowerCase();
+            let icon = 'fa-file-code';
+            let language = ext;
             
+            if (['html'].includes(ext)) icon = 'fa-file-code';
+            if (['css', 'scss'].includes(ext)) icon = 'fa-file-code';
+            if (['js', 'jsx', 'ts', 'tsx'].includes(ext)) icon = 'fa-file-code';
+            
+            const diffHTML = file.patch ? this.parseDiff(file.patch, language) : '<div class="no-diff">No changes to display</div>';
+            
+            let statusBadge = '';
+            let statusClass = '';
             if (file.status === 'added') {
-                statusClass = 'added';
-                icon = 'fa-plus';
+                statusBadge = '<span class="file-status-badge added">Added</span>';
+                statusClass = 'file-added';
             } else if (file.status === 'removed') {
-                statusClass = 'removed';
-                icon = 'fa-minus';
+                statusBadge = '<span class="file-status-badge removed">Deleted</span>';
+                statusClass = 'file-removed';
+            } else if (file.status === 'modified') {
+                statusBadge = '<span class="file-status-badge modified">Modified</span>';
+                statusClass = 'file-modified';
             }
             
             return `
-                <span class="file-badge ${statusClass}">
-                    <i class="fas ${icon}"></i>
-                    ${file.filename}
-                </span>
+                <div class="code-diff-file ${statusClass}">
+                    <div class="code-file-header">
+                        <div class="file-info">
+                            <i class="fas ${icon}"></i>
+                            <span class="file-name">${file.filename}</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="file-stats">
+                            <span class="additions">+${file.additions}</span>
+                            <span class="deletions">-${file.deletions}</span>
+                            <button class="toggle-diff-btn" onclick="converter.toggleDiff(${commitIndex}, ${fileIndex})">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="code-diff-content" id="diff-${commitIndex}-${fileIndex}" style="display: block;">
+                        ${diffHTML}
+                    </div>
+                </div>
             `;
         }).join('');
         
-        const moreFiles = files.length > 5 ? `<span class="file-badge">+${files.length - 5} more</span>` : '';
+        return `<div class="commit-code-changes">${filesHTML}</div>`;
+    }
+    parseDiff(patch, language) {
+        if (!patch) return '<div class="no-diff">No diff available</div>';
         
-        return `
-            <div class="commit-files">
-                <div class="commit-files-title">Files changed:</div>
-                <div class="file-list">
-                    ${filesList}
-                    ${moreFiles}
-                </div>
-            </div>
-        `;
+        const lines = patch.split('\n');
+        let html = '<div class="diff-table">';
+        let oldLineNum = 0;
+        let newLineNum = 0;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // Parse hunk header (@@ -1,5 +1,6 @@)
+            if (line.startsWith('@@')) {
+                const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
+                if (match) {
+                    oldLineNum = parseInt(match[1]);
+                    newLineNum = parseInt(match[2]);
+                }
+                html += `<div class="diff-hunk-header">${this.escapeHtml(line)}</div>`;
+                continue;
+            }
+            
+            const firstChar = line[0];
+            const content = line.substring(1);
+            
+            if (firstChar === '-') {
+                // Deleted line (RED)
+                html += `
+                    <div class="diff-line removed">
+                        <span class="line-num old">${oldLineNum}</span>
+                        <span class="line-num new"></span>
+                        <span class="line-content"><span class="diff-marker">-</span>${this.escapeHtml(content)}</span>
+                    </div>
+                `;
+                oldLineNum++;
+            } else if (firstChar === '+') {
+                // Added line (GREEN)
+                html += `
+                    <div class="diff-line added">
+                        <span class="line-num old"></span>
+                        <span class="line-num new">${newLineNum}</span>
+                        <span class="line-content"><span class="diff-marker">+</span>${this.escapeHtml(content)}</span>
+                    </div>
+                `;
+                newLineNum++;
+            } else {
+                // Context line (GRAY/WHITE)
+                html += `
+                    <div class="diff-line context">
+                        <span class="line-num old">${oldLineNum}</span>
+                        <span class="line-num new">${newLineNum}</span>
+                        <span class="line-content">${this.escapeHtml(content)}</span>
+                    </div>
+                `;
+                oldLineNum++;
+                newLineNum++;
+            }
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    toggleDiff(commitIndex, fileIndex) {
+        const diffContent = document.getElementById(`diff-${commitIndex}-${fileIndex}`);
+        const btn = diffContent.previousElementSibling.querySelector('.toggle-diff-btn i');
+        
+        if (diffContent.style.display === 'none') {
+            diffContent.style.display = 'block';
+            btn.classList.remove('fa-chevron-down');
+            btn.classList.add('fa-chevron-up');
+        } else {
+            diffContent.style.display = 'none';
+            btn.classList.remove('fa-chevron-up');
+            btn.classList.add('fa-chevron-down');
+        }
     }
 
     escapeHtml(text) {
