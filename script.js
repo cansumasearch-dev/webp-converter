@@ -1708,6 +1708,7 @@ class ImageConverter {
 
     savePreviousPageSpeed(data) {
         localStorage.setItem('previousPageSpeed', JSON.stringify(data));
+        this.previousPageSpeedResults = data;
     }
 
     displayCurrentStrategy() {
@@ -1815,15 +1816,15 @@ class ImageConverter {
                 this.pagespeedStrategy
             );
             
-            const currentData = {
-                url: url,
-                strategy: this.pagespeedStrategy,
-                timestamp: new Date().toISOString(),
-                scores: this.extractScores(this.currentPageSpeedData[this.pagespeedStrategy])
-            };
-            
-            this.savePreviousPageSpeed(currentData);
-            this.previousPageSpeedResults = currentData;
+        // NEW CODE - Save BOTH mobile and desktop scores separately
+        const currentData = {
+            url: url,
+            timestamp: new Date().toISOString(),
+            mobile: this.currentPageSpeedData.mobile ? this.extractScores(this.currentPageSpeedData.mobile) : null,
+            desktop: this.currentPageSpeedData.desktop ? this.extractScores(this.currentPageSpeedData.desktop) : null
+        };
+
+        this.savePreviousPageSpeed(currentData);
             
         } catch (error) {
             console.error('❌ PageSpeed error:', error);
@@ -1887,13 +1888,23 @@ class ImageConverter {
     getScoreDifference(category) {
         if (!this.previousPageSpeedResults) return null;
         
+        // Get previous scores for CURRENT strategy (mobile or desktop)
+        const prevScores = this.previousPageSpeedResults[this.pagespeedStrategy];
+        if (!prevScores) return null;
+        
+        // Get current scores for CURRENT strategy
         const currentScores = this.extractScores(this.currentPageSpeedData[this.pagespeedStrategy]);
-        const prev = this.previousPageSpeedResults.scores[category];
+        
+        const prev = prevScores[category];
         const curr = currentScores[category];
         
         if (prev === undefined || curr === undefined) return null;
         
         const diff = curr - prev;
+        
+        // Only return if there's an actual difference
+        if (diff === 0) return null;
+        
         return {
             value: diff,
             increased: diff > 0,
@@ -2091,7 +2102,14 @@ class ImageConverter {
         modal.className = 'duplicate-modal';
         modal.style.display = 'flex';
         
-        const prev = this.previousPageSpeedResults;
+        // Get previous scores for current strategy
+        const prev = this.previousPageSpeedResults[this.pagespeedStrategy];
+        if (!prev) {
+            alert(`No previous ${this.pagespeedStrategy} data available for comparison.`);
+            return;
+        }
+        
+        // Get current scores for current strategy
         const curr = this.extractScores(this.currentPageSpeedData[this.pagespeedStrategy]);
         
         const compareRow = (label, prevVal, currVal) => {
@@ -2109,12 +2127,15 @@ class ImageConverter {
             `;
         };
         
+        const deviceName = this.pagespeedStrategy === 'mobile' ? 'Mobile' : 'Desktop';
+        const deviceIcon = this.pagespeedStrategy === 'mobile' ? '📱' : '🖥️';
+        
         modal.innerHTML = `
             <div class="duplicate-modal-content" style="max-width: 800px;">
                 <button class="close-modal">&times;</button>
                 <div class="modal-header">
-                    <h3 style="color: white;">Performance Comparison</h3>
-                    <p style="color: rgba(255,255,255,0.7);">Comparing current results with previous analysis</p>
+                    <h3 style="color: white;">${deviceIcon} ${deviceName} Performance Comparison</h3>
+                    <p style="color: rgba(255,255,255,0.7);">Comparing current ${deviceName.toLowerCase()} results with previous ${deviceName.toLowerCase()} analysis</p>
                 </div>
                 <div style="margin-top: 2rem;">
                     <table style="width: 100%; border-collapse: collapse;">
@@ -2127,12 +2148,17 @@ class ImageConverter {
                             </tr>
                         </thead>
                         <tbody>
-                            ${compareRow('Performance', prev.scores.performance, curr.performance)}
-                            ${compareRow('Accessibility', prev.scores.accessibility, curr.accessibility)}
-                            ${compareRow('Best Practices', prev.scores.bestPractices, curr.bestPractices)}
-                            ${compareRow('SEO', prev.scores.seo, curr.seo)}
+                            ${compareRow('Performance', prev.performance, curr.performance)}
+                            ${compareRow('Accessibility', prev.accessibility, curr.accessibility)}
+                            ${compareRow('Best Practices', prev.bestPractices, curr.bestPractices)}
+                            ${compareRow('SEO', prev.seo, curr.seo)}
                         </tbody>
                     </table>
+                </div>
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
+                    <p style="color: rgba(255,255,255,0.6); font-size: 0.85rem; margin: 0;">
+                        Previous analysis: ${new Date(this.previousPageSpeedResults.timestamp).toLocaleString()}
+                    </p>
                 </div>
             </div>
         `;
