@@ -1,0 +1,284 @@
+// ==========================================
+// BUTTONS
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Styled Button (Primary)
+// -----------------------------
+.btn-styled {
+    @include button-base;
+    background: $primary-gradient !important;
+    border-radius: $radius-lg;
+    padding: $spacing-md $spacing-lg;
+    color: $white !important;
+    font-size: $font-size-base;
+    @include button-glow;
+    
+    @include respond-to('md') {
+        padding: 0.7rem 1.2rem;
+        font-size: 0.95rem;
+    }
+    
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba($primary-color, 0.4);
+    }
+    
+    &:active {
+        transform: translateY(-1px);
+    }
+    
+    &.btn-danger {
+        background: $danger-gradient !important;
+        @include button-glow($danger-color);
+        
+        &:hover {
+            box-shadow: 0 8px 25px rgba($danger-color, 0.4);
+        }
+    }
+}
+
+// -----------------------------
+// Custom Button (Rounded)
+// -----------------------------
+.btn-custom {
+    @include button-base;
+    background: $primary-gradient;
+    border-radius: $radius-round;
+    padding: $spacing-md $spacing-xl;
+    color: $white;
+    font-size: $font-size-md;
+    position: relative;
+    overflow: hidden;
+    @include button-glow;
+    
+    @include respond-to('md') {
+        padding: $spacing-md $spacing-lg;
+        font-size: $font-size-base;
+    }
+    
+    @include respond-to('sm') {
+        padding: 0.7rem 1.2rem;
+        font-size: 0.9rem;
+        min-width: 120px;
+    }
+    
+    // Shine effect
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba($white, 0.3), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    &:hover {
+        transform: translateY(-3px);
+        
+        &::before {
+            left: 100%;
+        }
+    }
+    
+    &.btn-success {
+        background: $success-gradient;
+        @include button-glow($success-color);
+    }
+    
+    &.btn-secondary {
+        background: linear-gradient(135deg, $gray-600 0%, $gray-700 100%);
+        @include button-glow($gray-600);
+    }
+}
+
+// -----------------------------
+// Action Button
+// -----------------------------
+.btn-action {
+    @include button-base;
+    padding: $spacing-md $spacing-lg;
+    background: rgba($white, 0.1);
+    border: 2px solid rgba($white, 0.2);
+    border-radius: $radius-lg;
+    color: $white;
+    
+    i {
+        margin-right: $spacing-sm;
+    }
+    
+    &:hover {
+        background: rgba($white, 0.15);
+        border-color: rgba($white, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba($black, 0.2);
+    }
+}
+
+// -----------------------------
+// Changelog Close Button
+// -----------------------------
+.btn-changelog-close {
+    @include button-base;
+    background: $danger-gradient;
+    border-radius: $radius-md;
+    padding: $spacing-md $spacing-lg;
+    color: $white;
+    font-size: $font-size-base;
+    @include button-glow($danger-color);
+    
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba($danger-color, 0.4);
+    }
+}
+
+// -----------------------------
+// ChatGPT Button
+// -----------------------------
+.btn-chatgpt {
+    @include button-base;
+    padding: $spacing-md $spacing-xl;
+    background: linear-gradient(135deg, #10a37f 0%, #0d8c6d 100%);
+    border-radius: $radius-lg;
+    color: $white;
+    font-size: $font-size-base;
+    box-shadow: 0 5px 20px rgba(16, 163, 127, 0.3);
+    
+    i {
+        margin-right: $spacing-sm;
+    }
+    
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(16, 163, 127, 0.5);
+    }
+    
+    &:active {
+        transform: translateY(-1px);
+    }
+}
+
+// -----------------------------
+// Icon Buttons
+// -----------------------------
+.tool-btn,
+.preview-btn,
+.download-btn,
+.remove-btn,
+.reset-btn {
+    @include icon-button;
+    position: relative;
+    
+    @include respond-to('md') {
+        width: 32px;
+        height: 32px;
+        font-size: $font-size-xs;
+    }
+    
+    &:hover {
+        @include tooltip;
+    }
+    
+    &.active {
+        background: $primary-gradient;
+        color: $white;
+        border-color: transparent;
+    }
+}
+
+.tool-btn:hover {
+    border-color: $primary-color;
+    color: $primary-color;
+}
+
+.preview-btn:hover {
+    border-color: $info-color;
+    color: $info-color;
+}
+
+.download-btn:hover {
+    border-color: $success-color;
+    color: $success-color;
+}
+
+.reset-btn:hover {
+    border-color: $warning-color;
+    color: $warning-color;
+}
+
+.remove-btn:hover {
+    border-color: $danger-color;
+    color: $danger-color;
+}
+
+// -----------------------------
+// Bulk Action Buttons
+// -----------------------------
+.bulk-btn {
+    @include button-base;
+    background: rgba($white, 0.8);
+    border: 2px solid transparent;
+    border-radius: $radius-md;
+    padding: 0.6rem $spacing-md;
+    font-size: 0.9rem;
+    color: $text-primary;
+    
+    @include respond-to('md') {
+        padding: $spacing-sm $spacing-md;
+        font-size: $font-size-sm;
+    }
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-md;
+        border-color: $primary-color;
+    }
+    
+    &.danger:hover {
+        border-color: $danger-color;
+        color: $danger-color;
+    }
+}
+
+// -----------------------------
+// Action Buttons Container
+// -----------------------------
+.action-buttons {
+    display: flex;
+    gap: $spacing-md;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: $spacing-xl 0;
+}
+
+// -----------------------------
+// Bulk Actions Container
+// -----------------------------
+.bulk-actions {
+    padding: $spacing-lg;
+    background: rgba($white, 0.1);
+    border-radius: $radius-xl;
+    border: 1px solid rgba($white, 0.2);
+    margin: $spacing-xl 0;
+    
+    .bulk-actions-header {
+        text-align: center;
+        font-weight: $font-weight-semibold;
+        color: $text-primary;
+        margin-bottom: $spacing-md;
+        font-size: $font-size-md;
+    }
+    
+    .bulk-buttons {
+        display: flex;
+        gap: $spacing-md;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}

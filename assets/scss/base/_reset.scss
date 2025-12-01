@@ -1,0 +1,116 @@
+// ==========================================
+// RESET & BASE STYLES
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Box Sizing Reset
+// -----------------------------
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+// -----------------------------
+// HTML & Body
+// -----------------------------
+html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    background: $body-gradient;
+    min-height: 100vh;
+    font-family: $font-family-base;
+    font-size: $font-size-base;
+    line-height: 1.6;
+    color: $text-primary;
+    position: relative;
+    overflow-x: hidden;
+    
+    // Animated background effect
+    &::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+            radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+        z-index: -1;
+        animation: float 20s ease-in-out infinite;
+    }
+}
+
+// -----------------------------
+// Links
+// -----------------------------
+a {
+    color: $primary-color;
+    text-decoration: none;
+    transition: color $transition-fast;
+    
+    &:hover {
+        color: darken($primary-color, 10%);
+    }
+}
+
+// -----------------------------
+// Images
+// -----------------------------
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+// -----------------------------
+// Lists
+// -----------------------------
+ul, ol {
+    list-style: none;
+}
+
+// -----------------------------
+// Buttons
+// -----------------------------
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+// -----------------------------
+// Inputs
+// -----------------------------
+input,
+textarea,
+select {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+// -----------------------------
+// Focus Styles
+// -----------------------------
+:focus-visible {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+}
+
+// -----------------------------
+// Selection
+// -----------------------------
+::selection {
+    background: rgba($primary-color, 0.3);
+    color: $text-primary;
+}

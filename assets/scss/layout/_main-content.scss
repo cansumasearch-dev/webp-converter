@@ -1,0 +1,159 @@
+// ==========================================
+// MAIN CONTENT LAYOUT
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Main Content Container
+// -----------------------------
+.main-content {
+    transition: margin-left $transition-smooth;
+    min-height: 100vh;
+    padding: $spacing-xl;
+    display: flex;
+    gap: $spacing-xl;
+    
+    @include respond-to('xl') {
+        flex-direction: column;
+    }
+    
+    @include respond-to('md') {
+        padding: $spacing-md;
+    }
+}
+
+// -----------------------------
+// Main Content Wrapper
+// -----------------------------
+.main-content-wrapper {
+    flex: 1;
+    min-width: 0;
+}
+
+// -----------------------------
+// Content Section
+// -----------------------------
+.content-section {
+    display: none;
+    animation: fadeIn 0.4s ease-out;
+    
+    &.active {
+        display: block;
+    }
+}
+
+.content-section-inner {
+    padding: $spacing-xl;
+    
+    @include respond-to('md') {
+        padding: $spacing-lg;
+    }
+}
+
+// -----------------------------
+// Main Container (Glass Card)
+// -----------------------------
+.main-container {
+    @include glassmorphism;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: $shadow-glass;
+    margin: 0 auto;
+    max-width: $container-max-width;
+    
+    @include respond-to('md') {
+        border-radius: $radius-xxl;
+    }
+}
+
+// -----------------------------
+// Section Header (Centered)
+// -----------------------------
+.section-header-centered {
+    text-align: center;
+    margin-bottom: $spacing-xxl;
+    
+    h2 {
+        font-size: 2.5rem;
+        font-weight: $font-weight-bold;
+        color: $white;
+        text-shadow: 2px 2px 4px rgba($black, 0.3);
+        margin-bottom: $spacing-md;
+        
+        @include respond-to('md') {
+            font-size: $font-size-xxl;
+        }
+    }
+    
+    p {
+        font-size: $font-size-lg;
+        color: rgba($white, 0.9);
+        margin: 0 0 $spacing-xl 0;
+        
+        @include respond-to('md') {
+            font-size: $font-size-base;
+        }
+    }
+}
+
+// -----------------------------
+// PageSpeed Container
+// -----------------------------
+.pagespeed-container {
+    padding: $spacing-xl;
+    max-width: $container-max-width;
+    margin: 0 auto;
+    
+    @include respond-to('md') {
+        padding: $spacing-md;
+    }
+    
+    .pagespeed-loading {
+        text-align: center;
+        padding: $spacing-xxl;
+        
+        i {
+            font-size: 3rem;
+            color: $primary-color;
+            margin-bottom: $spacing-md;
+        }
+        
+        p {
+            color: rgba($white, 0.8);
+            font-size: $font-size-md;
+        }
+    }
+}
+
+// -----------------------------
+// PageSpeed Actions
+// -----------------------------
+.pagespeed-actions {
+    display: flex;
+    gap: $spacing-md;
+    margin-bottom: $spacing-xl;
+    flex-wrap: wrap;
+    justify-content: center;
+    
+    @include respond-to('md') {
+        flex-direction: column;
+        
+        .btn-action {
+            width: 100%;
+        }
+    }
+}
+
+// -----------------------------
+// ChatGPT Section
+// -----------------------------
+.chatgpt-section {
+    @include glassmorphism;
+    padding: $spacing-xl;
+    border-radius: $radius-xxl;
+    text-align: center;
+    @include flex-column;
+    gap: $spacing-md;
+}

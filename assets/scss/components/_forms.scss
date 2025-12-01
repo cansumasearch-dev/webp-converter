@@ -1,0 +1,191 @@
+// ==========================================
+// FORMS
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Form Check Input (Checkbox/Radio)
+// -----------------------------
+.form-check-input {
+    background-color: rgba($white, 0.3);
+    border: 2px solid rgba($white, 0.5);
+    transition: all $transition-base;
+    
+    &:checked {
+        background-color: $success-color;
+        border-color: $success-color;
+        box-shadow: 0 0 15px rgba($success-color, 0.4);
+    }
+    
+    &:focus {
+        box-shadow: 0 0 0 0.25rem rgba($success-color, 0.25);
+    }
+}
+
+// -----------------------------
+// Preset Form
+// -----------------------------
+.preset-form {
+    @include flex-column;
+    gap: $spacing-lg;
+    
+    label {
+        font-weight: $font-weight-semibold;
+        color: $text-primary;
+        font-size: $font-size-base;
+    }
+    
+    .preset-input {
+        padding: $spacing-md;
+        border: 2px solid rgba($black, 0.1);
+        border-radius: $radius-md;
+        font-size: $font-size-base;
+        transition: all $transition-base;
+        
+        &:focus {
+            outline: none;
+            border-color: $primary-color;
+            box-shadow: 0 0 15px rgba($primary-color, 0.2);
+        }
+    }
+}
+
+// -----------------------------
+// GitHub Settings
+// -----------------------------
+.github-settings-card {
+    background: rgba($white, 0.05);
+    border-radius: 16px;
+    padding: $spacing-xl;
+    margin-bottom: $spacing-xl;
+    border: 1px solid rgba($white, 0.1);
+    
+    h3 {
+        color: $white;
+        margin-bottom: $spacing-lg;
+        font-size: $font-size-lg;
+    }
+}
+
+.github-input-group {
+    display: flex;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+    flex-wrap: wrap;
+    
+    @include respond-to('md') {
+        flex-direction: column;
+    }
+}
+
+.github-input {
+    flex: 1;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    border: 2px solid rgba($white, 0.1);
+    background: rgba($white, 0.05);
+    color: $white;
+    font-size: $font-size-base;
+    transition: all $transition-base;
+    
+    &:focus {
+        outline: none;
+        border-color: $primary-color;
+        background: rgba($white, 0.08);
+    }
+    
+    &::placeholder {
+        color: rgba($white, 0.4);
+    }
+}
+
+.github-hint {
+    color: rgba($white, 0.6);
+    font-size: 0.9rem;
+    margin-top: $spacing-sm;
+    display: flex;
+    align-items: center;
+}
+
+// -----------------------------
+// PageSpeed Input Section
+// -----------------------------
+.pagespeed-input-section {
+    @include glassmorphism;
+    border-radius: $radius-xxl;
+    padding: $spacing-xl;
+    margin-bottom: $spacing-xl;
+    @include flex-column;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    
+    .pagespeed-input-group {
+        display: flex;
+        gap: $spacing-md;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: $spacing-lg;
+        
+        @include respond-to('md') {
+            flex-direction: column;
+        }
+        
+        input[type="url"] {
+            flex: 1;
+            min-width: 300px;
+            padding: $spacing-md;
+            border: 2px solid rgba($white, 0.1);
+            background: rgba($white, 0.05);
+            border-radius: $radius-lg;
+            color: $white;
+            font-size: $font-size-base;
+            transition: all $transition-base;
+            
+            &:focus {
+                outline: none;
+                border-color: rgba($primary-color, 0.5);
+                background: rgba($white, 0.08);
+            }
+            
+            &::placeholder {
+                color: rgba($white, 0.4);
+            }
+        }
+    }
+    
+    .device-toggle {
+        display: flex;
+        gap: $spacing-sm;
+        justify-content: center;
+        
+        .device-btn {
+            @include button-base;
+            padding: $spacing-md $spacing-lg;
+            border: 2px solid rgba($white, 0.2);
+            background: rgba($white, 0.05);
+            color: rgba($white, 0.7);
+            border-radius: $radius-md;
+            
+            i {
+                margin-right: $spacing-sm;
+            }
+            
+            &:hover {
+                background: rgba($white, 0.1);
+                border-color: rgba($white, 0.3);
+                color: $white;
+            }
+            
+            &.active {
+                background: $primary-gradient;
+                border-color: transparent;
+                color: $white;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba($primary-color, 0.4);
+            }
+        }
+    }
+}

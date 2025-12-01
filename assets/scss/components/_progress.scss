@@ -1,0 +1,109 @@
+// ==========================================
+// PROGRESS
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Progress Section
+// -----------------------------
+.progress-section {
+    @include card-base;
+    margin: $spacing-xl 0;
+    
+    // -----------------------------
+    // Overall Progress
+    // -----------------------------
+    .overall-progress {
+        text-align: center;
+        margin-bottom: $spacing-xl;
+        
+        .progress-text {
+            font-size: $font-size-lg;
+            font-weight: $font-weight-semibold;
+            color: $text-primary;
+            margin-bottom: $spacing-md;
+            
+            @include respond-to('md') {
+                font-size: $font-size-base;
+            }
+        }
+        
+        .current-file-info {
+            text-align: center;
+            font-size: 0.95rem;
+            color: $text-secondary;
+            margin: $spacing-sm 0;
+            font-weight: $font-weight-medium;
+            
+            @include respond-to('md') {
+                font-size: $font-size-sm;
+            }
+            
+            .processing-file {
+                color: $warning-color;
+                font-weight: $font-weight-semibold;
+            }
+        }
+        
+        .progress-bar-container {
+            background: rgba($white, 0.3);
+            border-radius: $radius-round;
+            height: 16px;
+            overflow: hidden;
+            position: relative;
+            
+            .progress-bar-fill {
+                height: 100%;
+                background: $success-gradient;
+                border-radius: $radius-round;
+                transition: width 0.8s $transition-smooth;
+                position: relative;
+                
+                &::after {
+                    content: '';
+                    @include absolute-fill;
+                    background: linear-gradient(90deg, transparent, rgba($white, 0.3), transparent);
+                    animation: shimmer 2s infinite;
+                }
+            }
+        }
+    }
+}
+
+// -----------------------------
+// Circular Progress (for scores)
+// -----------------------------
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: $radius-circle;
+    @include flex-center;
+    font-size: 2.5rem;
+    font-weight: $font-weight-bold;
+    color: $white;
+    margin: 0 auto;
+    box-shadow: 0 10px 30px rgba($black, 0.3);
+    position: relative;
+    
+    @include status-colors;
+}
+
+// -----------------------------
+// Score Change Badge
+// -----------------------------
+.score-change {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 35px;
+    height: 35px;
+    border-radius: $radius-circle;
+    @include flex-center;
+    font-size: 0.9rem;
+    font-weight: $font-weight-bold;
+    color: $white;
+    box-shadow: 0 5px 15px rgba($black, 0.3);
+    animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}

@@ -1,0 +1,163 @@
+// ==========================================
+// TYPOGRAPHY
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Headings
+// -----------------------------
+h1, h2, h3, h4, h5, h6 {
+    font-weight: $font-weight-bold;
+    line-height: 1.2;
+    margin-bottom: $spacing-md;
+}
+
+h1 {
+    font-size: $font-size-hero;
+    
+    @include respond-to('md') {
+        font-size: $font-size-xxl;
+    }
+    
+    @include respond-to('sm') {
+        font-size: $font-size-xxl;
+    }
+}
+
+h2 {
+    font-size: 2.5rem;
+    
+    @include respond-to('md') {
+        font-size: $font-size-xxl;
+    }
+}
+
+h3 {
+    font-size: $font-size-xl;
+    
+    @include respond-to('md') {
+        font-size: $font-size-lg;
+    }
+}
+
+h4 {
+    font-size: $font-size-md;
+}
+
+h5 {
+    font-size: $font-size-base;
+}
+
+h6 {
+    font-size: $font-size-sm;
+}
+
+// -----------------------------
+// Paragraphs
+// -----------------------------
+p {
+    margin-bottom: $spacing-md;
+    
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+// -----------------------------
+// Strong & Bold
+// -----------------------------
+strong, b {
+    font-weight: $font-weight-semibold;
+}
+
+// -----------------------------
+// Small
+// -----------------------------
+small {
+    font-size: $font-size-sm;
+}
+
+// -----------------------------
+// Code
+// -----------------------------
+code {
+    font-family: $font-family-mono;
+    background: rgba($black, 0.08);
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-sm;
+    font-size: 0.9em;
+}
+
+pre {
+    font-family: $font-family-mono;
+    background: #1e1e1e;
+    padding: $spacing-md;
+    border-radius: $radius-sm;
+    overflow-x: auto;
+    color: #f8f8f2;
+    font-size: $font-size-sm;
+    
+    code {
+        background: none;
+        padding: 0;
+    }
+}
+
+// -----------------------------
+// Text Colors
+// -----------------------------
+.text-primary {
+    color: $primary-color !important;
+}
+
+.text-success {
+    color: $success-color !important;
+}
+
+.text-warning {
+    color: $warning-color !important;
+}
+
+.text-danger {
+    color: $danger-color !important;
+}
+
+.text-info {
+    color: $info-color !important;
+}
+
+.text-muted {
+    color: $text-secondary !important;
+}
+
+.text-muted-white {
+    color: rgba($white, 0.8) !important;
+}
+
+.text-white {
+    color: $white !important;
+}
+
+// -----------------------------
+// Text Alignment
+// -----------------------------
+.text-center {
+    text-align: center !important;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+// -----------------------------
+// Text Shadow for Headers
+// -----------------------------
+.text-shadow {
+    text-shadow: 2px 2px 4px rgba($black, 0.3);
+}

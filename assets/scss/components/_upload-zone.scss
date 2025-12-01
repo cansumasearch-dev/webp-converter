@@ -1,0 +1,188 @@
+// ==========================================
+// UPLOAD ZONE
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Upload Zone
+// -----------------------------
+.upload-zone {
+    background: rgba($white, 0.1);
+    border: 3px dashed rgba($white, 0.4);
+    border-radius: $radius-xxl;
+    padding: 4rem $spacing-xl;
+    text-align: center;
+    cursor: pointer;
+    transition: all $transition-smooth;
+    backdrop-filter: blur(5px);
+    position: relative;
+    overflow: hidden;
+    
+    @include respond-to('md') {
+        padding: $spacing-xxl $spacing-lg;
+    }
+    
+    @include respond-to('sm') {
+        padding: $spacing-xl $spacing-md;
+    }
+    
+    // Shine effect
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba($white, 0.2), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    &:hover {
+        border-color: rgba($white, 0.8);
+        background: rgba($white, 0.2);
+        transform: translateY(-5px);
+        @include button-glow($white);
+        
+        &::before {
+            left: 100%;
+        }
+        
+        .upload-icon {
+            transform: scale(1.1);
+            color: $white;
+        }
+    }
+    
+    &.dragover {
+        border-color: #4facfe;
+        background: rgba(79, 172, 254, 0.2);
+        transform: scale(1.02);
+        
+        .upload-icon {
+            animation: bounce 0.6s ease infinite;
+        }
+    }
+    
+    .upload-icon {
+        font-size: 4rem;
+        color: rgba($white, 0.8);
+        margin-bottom: $spacing-lg;
+        transition: all $transition-base;
+        
+        @include respond-to('md') {
+            font-size: 3rem;
+        }
+    }
+    
+    h3 {
+        color: $white;
+        font-weight: $font-weight-semibold;
+        margin-bottom: $spacing-md;
+        font-size: 1.8rem;
+        
+        @include respond-to('md') {
+            font-size: $font-size-xl;
+        }
+    }
+    
+    p {
+        color: rgba($white, 0.8);
+        font-size: $font-size-md;
+        margin-bottom: 0;
+        
+        @include respond-to('md') {
+            font-size: $font-size-base;
+        }
+    }
+}
+
+// -----------------------------
+// URL Upload Section
+// -----------------------------
+.url-upload-section {
+    @include glassmorphism;
+    border-radius: $radius-xl;
+    padding: $spacing-lg;
+    margin-top: $spacing-xl;
+    
+    .url-upload-header {
+        text-align: center;
+        font-weight: $font-weight-semibold;
+        color: $text-primary;
+        margin-bottom: $spacing-md;
+        font-size: $font-size-md;
+    }
+    
+    .url-input-group {
+        display: flex;
+        gap: $spacing-md;
+        margin-bottom: $spacing-md;
+        
+        @include respond-to('md') {
+            flex-direction: column;
+        }
+        
+        .url-input {
+            flex: 1;
+            @include input-base;
+        }
+        
+        .url-add-btn {
+            @include button-base;
+            background: $primary-gradient;
+            border-radius: $radius-md;
+            padding: $spacing-md $spacing-lg;
+            color: $white;
+            white-space: nowrap;
+            @include button-glow;
+            
+            @include respond-to('md') {
+                width: 100%;
+            }
+            
+            &:hover {
+                transform: translateY(-2px);
+            }
+        }
+    }
+    
+    .url-list {
+        @include flex-column;
+        gap: $spacing-md;
+        
+        .url-item {
+            background: rgba($white, 0.6);
+            border-radius: $radius-md;
+            padding: $spacing-md;
+            @include flex-between;
+            gap: $spacing-md;
+            
+            .url-text {
+                flex: 1;
+                font-size: 0.9rem;
+                color: $text-primary;
+                word-break: break-all;
+            }
+            
+            .url-remove-btn {
+                background: $danger-color;
+                border: none;
+                border-radius: $radius-sm;
+                width: 30px;
+                height: 30px;
+                color: $white;
+                cursor: pointer;
+                transition: all $transition-base;
+                flex-shrink: 0;
+                
+                &:hover {
+                    background: darken($danger-color, 10%);
+                    transform: scale(1.1);
+                }
+            }
+        }
+    }
+}

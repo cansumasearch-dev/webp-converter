@@ -1,0 +1,210 @@
+// ==========================================
+// SIDEBAR
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Sidebar Toggle Button
+// -----------------------------
+.sidebar-toggle {
+    position: fixed;
+    top: $spacing-lg;
+    left: $spacing-lg;
+    z-index: $z-sidebar-overlay;
+    background: $primary-gradient;
+    border: none;
+    border-radius: $radius-lg;
+    width: 50px;
+    height: 50px;
+    color: $white;
+    font-size: $font-size-xl;
+    cursor: pointer;
+    transition: all $transition-base;
+    @include button-glow;
+    
+    &:hover {
+        transform: scale(1.1);
+    }
+    
+    @include respond-to('md') {
+        top: $spacing-md;
+        left: $spacing-md;
+        width: 45px;
+        height: 45px;
+        font-size: 1.3rem;
+    }
+}
+
+// -----------------------------
+// Sidebar
+// -----------------------------
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -#{$sidebar-width};
+    width: $sidebar-width;
+    height: 100vh;
+    background: linear-gradient(180deg, rgba($primary-color, 0.95) 0%, rgba($secondary-color, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    z-index: $z-sidebar;
+    transition: left $transition-smooth;
+    box-shadow: 5px 0 30px rgba($black, 0.3);
+    @include flex-column;
+    
+    &.active {
+        left: 0;
+    }
+    
+    // -----------------------------
+    // Sidebar Header
+    // -----------------------------
+    .sidebar-header {
+        padding: $spacing-xl $spacing-lg $spacing-lg;
+        border-bottom: 1px solid rgba($white, 0.1);
+        @include flex-between;
+        
+        h3 {
+            color: $white;
+            font-size: 1.3rem;
+            font-weight: $font-weight-bold;
+            margin: 0;
+        }
+        
+        .sidebar-close {
+            background: rgba($white, 0.2);
+            border: none;
+            border-radius: $radius-md;
+            width: 35px;
+            height: 35px;
+            color: $white;
+            font-size: $font-size-lg;
+            cursor: pointer;
+            transition: all $transition-base;
+            
+            &:hover {
+                background: rgba($white, 0.3);
+                transform: rotate(90deg);
+            }
+        }
+    }
+    
+    // -----------------------------
+    // Sidebar Navigation
+    // -----------------------------
+    .sidebar-nav {
+        flex: 1;
+        padding: $spacing-lg 0;
+        overflow-y: auto;
+        @include custom-scrollbar(6px, rgba($white, 0.05), rgba($white, 0.2));
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: $spacing-md $spacing-lg;
+            color: rgba($white, 0.8);
+            text-decoration: none;
+            transition: all $transition-base;
+            border-left: 3px solid transparent;
+            
+            i {
+                font-size: $font-size-lg;
+                margin-right: $spacing-md;
+                width: 24px;
+                text-align: center;
+            }
+            
+            span {
+                font-weight: $font-weight-medium;
+                font-size: $font-size-base;
+            }
+            
+            &:hover {
+                background: rgba($white, 0.1);
+                color: $white;
+                padding-left: $spacing-xl;
+            }
+            
+            &.active {
+                background: rgba($white, 0.15);
+                color: $white;
+                border-left-color: $white;
+                font-weight: $font-weight-semibold;
+            }
+        }
+    }
+    
+    // -----------------------------
+    // Sidebar Stats
+    // -----------------------------
+    .sidebar-stats {
+        padding: $spacing-lg;
+        border-top: 1px solid rgba($white, 0.1);
+        
+        .sidebar-stat-item {
+            display: flex;
+            align-items: center;
+            padding: $spacing-md 0;
+            
+            i {
+                font-size: $font-size-xl;
+                color: rgba($white, 0.9);
+                margin-right: $spacing-md;
+            }
+            
+            .stat-info {
+                flex: 1;
+                
+                .stat-label {
+                    font-size: $font-size-xs;
+                    color: rgba($white, 0.7);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                
+                .stat-value {
+                    font-size: $font-size-md;
+                    color: $white;
+                    font-weight: $font-weight-bold;
+                    margin-top: $spacing-xs;
+                }
+            }
+        }
+    }
+    
+    // -----------------------------
+    // Sidebar Footer
+    // -----------------------------
+    .sidebar-footer {
+        padding: $spacing-md $spacing-lg;
+        border-top: 1px solid rgba($white, 0.1);
+        text-align: center;
+        
+        small {
+            color: rgba($white, 0.6);
+            font-size: $font-size-sm;
+        }
+    }
+}
+
+// -----------------------------
+// Sidebar Overlay
+// -----------------------------
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba($black, 0.5);
+    z-index: $z-sidebar-overlay;
+    opacity: 0;
+    visibility: hidden;
+    transition: all $transition-base;
+    
+    &.active {
+        opacity: 1;
+        visibility: visible;
+    }
+}

@@ -1,0 +1,197 @@
+// ==========================================
+// PREVIEW PANEL
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Live Preview Panel
+// -----------------------------
+.live-preview-panel {
+    width: 400px;
+    position: sticky;
+    top: $spacing-xl;
+    height: calc(100vh - 4rem);
+    @include flex-column;
+    
+    @include respond-to('xl') {
+        position: relative;
+        width: 100%;
+        height: auto;
+        max-height: 600px;
+        top: 0;
+    }
+    
+    &.d-none {
+        display: none;
+    }
+    
+    // -----------------------------
+    // Panel Header
+    // -----------------------------
+    .preview-panel-header {
+        @include glassmorphism;
+        border-radius: $radius-xl $radius-xl 0 0;
+        padding: $spacing-lg;
+        @include flex-between;
+        
+        h3 {
+            color: $text-primary;
+            font-size: $font-size-lg;
+            font-weight: $font-weight-bold;
+            margin: 0;
+            
+            i {
+                margin-right: $spacing-sm;
+                color: $primary-color;
+            }
+        }
+        
+        .preview-toggle {
+            background: $danger-gradient;
+            border: none;
+            border-radius: $radius-md;
+            width: 35px;
+            height: 35px;
+            color: $white;
+            cursor: pointer;
+            transition: all $transition-base;
+            
+            &:hover {
+                transform: scale(1.1) rotate(90deg);
+            }
+        }
+    }
+    
+    // -----------------------------
+    // Panel Content
+    // -----------------------------
+    .preview-panel-content {
+        @include glassmorphism;
+        border-radius: 0 0 $radius-xl $radius-xl;
+        flex: 1;
+        overflow-y: auto;
+        padding: $spacing-lg;
+        @include flex-column;
+        gap: $spacing-lg;
+        @include custom-scrollbar;
+        
+        .empty-preview {
+            text-align: center;
+            padding: $spacing-xxl $spacing-md;
+            color: $text-secondary;
+            
+            i {
+                font-size: 3rem;
+                color: rgba($white, 0.3);
+                margin-bottom: $spacing-md;
+                display: block;
+            }
+        }
+        
+        // -----------------------------
+        // Preview Item Card
+        // -----------------------------
+        .preview-item-card {
+            background: rgba($white, 0.5);
+            border-radius: $radius-lg;
+            padding: $spacing-md;
+            border: 2px solid transparent;
+            transition: all $transition-base;
+            
+            &:hover {
+                border-color: $primary-color;
+                transform: translateY(-2px);
+                box-shadow: $shadow-sm;
+            }
+            
+            .preview-item-name {
+                font-weight: $font-weight-semibold;
+                color: $text-primary;
+                font-size: 0.9rem;
+                margin-bottom: $spacing-md;
+                word-break: break-all;
+            }
+            
+            .preview-images {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: $spacing-md;
+                
+                .preview-image-wrapper {
+                    text-align: center;
+                    
+                    .preview-label {
+                        font-size: $font-size-xs;
+                        font-weight: $font-weight-semibold;
+                        color: $text-secondary;
+                        margin-bottom: $spacing-sm;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    
+                    .preview-img {
+                        width: 100%;
+                        height: 120px;
+                        object-fit: cover;
+                        border-radius: $radius-md;
+                        border: 2px solid rgba($white, 0.5);
+                        margin-bottom: $spacing-sm;
+                    }
+                    
+                    .preview-size {
+                        font-size: $font-size-xs;
+                        color: $text-secondary;
+                    }
+                }
+            }
+            
+            .preview-savings {
+                margin-top: $spacing-md;
+                text-align: center;
+                
+                .savings-badge {
+                    @include badge($success-gradient);
+                    font-size: $font-size-xs;
+                    font-weight: $font-weight-bold;
+                }
+            }
+        }
+    }
+}
+
+// -----------------------------
+// Reopen Preview Button
+// -----------------------------
+.reopen-preview-btn {
+    position: fixed;
+    bottom: $spacing-xl;
+    right: $spacing-xl;
+    background: $primary-gradient;
+    border: none;
+    border-radius: $radius-round;
+    padding: $spacing-md $spacing-xl;
+    color: $white;
+    font-weight: $font-weight-semibold;
+    font-size: $font-size-md;
+    cursor: pointer;
+    transition: all $transition-base;
+    @include button-glow;
+    z-index: $z-fixed;
+    
+    @include respond-to('md') {
+        bottom: $spacing-md;
+        right: $spacing-md;
+        padding: $spacing-md $spacing-lg;
+        font-size: $font-size-base;
+    }
+    
+    &:hover {
+        transform: translateY(-5px) scale(1.05);
+    }
+    
+    &.d-none {
+        display: none;
+    }
+}

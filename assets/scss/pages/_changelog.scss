@@ -1,0 +1,444 @@
+// ==========================================
+// CHANGELOG PAGE
+// ==========================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// -----------------------------
+// Changelog Container
+// -----------------------------
+.changelog-container {
+    padding: $spacing-xl;
+    background: $white;
+    border-radius: $radius-xxl;
+    
+    @include respond-to('md') {
+        padding: $spacing-md;
+    }
+    
+    // Buttons
+    .changelog-buttons {
+        @include flex-column;
+        gap: $spacing-lg;
+        max-width: 600px;
+        margin: 0 auto $spacing-xl;
+        
+        .changelog-btn {
+            @include button-base;
+            background: $primary-gradient;
+            border-radius: $radius-xl;
+            padding: $spacing-lg $spacing-xl;
+            color: $white;
+            font-size: $font-size-lg;
+            width: 100%;
+            @include button-glow;
+            
+            &:hover {
+                transform: translateY(-5px);
+            }
+            
+            &:nth-child(2) {
+                background: $secondary-gradient;
+            }
+            
+            &:nth-child(3) {
+                background: $warning-gradient;
+            }
+        }
+    }
+    
+    // Viewer
+    .changelog-viewer {
+        margin-top: $spacing-xl;
+        animation: slideDown 0.4s ease-out;
+        
+        .changelog-header {
+            @include flex-between;
+            margin-bottom: $spacing-xl;
+            flex-wrap: wrap;
+            gap: $spacing-md;
+            padding-bottom: $spacing-md;
+            border-bottom: 2px solid $gray-300;
+            
+            h3 {
+                color: $text-primary;
+                font-size: $font-size-xxl;
+                font-weight: $font-weight-bold;
+                margin: 0;
+            }
+        }
+        
+        .changelog-content {
+            background: $white;
+            border-radius: $radius-xl;
+            overflow: hidden;
+            border: 2px solid $gray-300;
+            
+            .changelog-split {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0;
+                
+                @include respond-to('lg') {
+                    grid-template-columns: 1fr;
+                }
+                
+                .changelog-side {
+                    padding: $spacing-xl;
+                    min-height: 400px;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                    background: $white;
+                    
+                    &.old {
+                        border-right: 2px solid $gray-300;
+                        
+                        @include respond-to('lg') {
+                            border-right: none;
+                            border-bottom: 2px solid $gray-300;
+                        }
+                        
+                        .side-label {
+                            color: #d32f2f;
+                        }
+                        
+                        pre {
+                            color: #d32f2f;
+                        }
+                    }
+                    
+                    &.new {
+                        .side-label {
+                            color: #388e3c;
+                        }
+                        
+                        pre {
+                            color: #388e3c;
+                        }
+                    }
+                    
+                    .side-label {
+                        font-weight: $font-weight-bold;
+                        font-size: $font-size-lg;
+                        margin-bottom: $spacing-lg;
+                        display: flex;
+                        align-items: center;
+                        padding-bottom: $spacing-sm;
+                        border-bottom: 2px solid currentColor;
+                        
+                        i {
+                            margin-right: $spacing-sm;
+                        }
+                    }
+                    
+                    pre {
+                        font-family: $font-family-mono;
+                        font-size: $font-size-sm;
+                        line-height: 1.6;
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                        margin: 0;
+                        
+                        @include respond-to('md') {
+                            font-size: $font-size-xs;
+                        }
+                    }
+                    
+                    @include custom-scrollbar(8px, $gray-100, $gray-400);
+                }
+            }
+        }
+    }
+}
+
+// -----------------------------
+// Changelog Timeline (GitHub)
+// -----------------------------
+.changelog-timeline {
+    position: relative;
+    padding-left: $spacing-xl;
+    margin: $spacing-xl 0;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(180deg, $primary-color, $secondary-color);
+    }
+}
+
+// -----------------------------
+// Commit Item
+// -----------------------------
+.commit-item {
+    position: relative;
+    margin-bottom: $spacing-xl;
+    padding: $spacing-lg;
+    background: rgba($white, 0.05);
+    border-radius: $radius-lg;
+    border: 1px solid rgba($white, 0.1);
+    transition: all $transition-base;
+    
+    &:hover {
+        background: rgba($white, 0.08);
+        transform: translateX(5px);
+    }
+    
+    &::before {
+        content: '';
+        position: absolute;
+        left: -$spacing-xl;
+        top: $spacing-lg;
+        width: 12px;
+        height: 12px;
+        background: $primary-color;
+        border-radius: $radius-circle;
+        border: 3px solid #1a1a2e;
+    }
+    
+    .commit-header {
+        margin-bottom: $spacing-md;
+    }
+    
+    .commit-message {
+        color: $white;
+        font-size: $font-size-md;
+        margin-bottom: 0.75rem;
+        font-weight: $font-weight-semibold;
+    }
+    
+    .commit-meta {
+        display: flex;
+        gap: $spacing-xl;
+        flex-wrap: wrap;
+        font-size: 0.9rem;
+    }
+    
+    .commit-author,
+    .commit-date,
+    .commit-sha {
+        color: rgba($white, 0.7);
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+    }
+    
+    .commit-author i {
+        color: $primary-color;
+    }
+    
+    .commit-date i {
+        color: $secondary-color;
+    }
+    
+    .commit-sha {
+        font-family: $font-family-mono;
+        background: rgba($white, 0.1);
+        padding: $spacing-xs 0.75rem;
+        border-radius: $radius-sm;
+    }
+    
+    .commit-files {
+        margin-top: $spacing-md;
+        padding-top: $spacing-md;
+        border-top: 1px solid rgba($white, 0.1);
+        
+        .commit-files-title {
+            color: rgba($white, 0.8);
+            font-size: 0.9rem;
+            margin-bottom: $spacing-sm;
+            font-weight: $font-weight-semibold;
+        }
+    }
+}
+
+// -----------------------------
+// Code Diff Styles
+// -----------------------------
+.commit-code-changes {
+    margin-top: $spacing-lg;
+}
+
+.code-diff-file {
+    background: rgba($white, 0.03);
+    border: 1px solid rgba($white, 0.1);
+    border-radius: $radius-md;
+    margin-bottom: $spacing-md;
+    overflow: hidden;
+}
+
+.code-file-header {
+    @include flex-between;
+    padding: $spacing-md;
+    background: rgba($white, 0.05);
+    border-bottom: 1px solid rgba($white, 0.1);
+    
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        
+        i {
+            color: $primary-color;
+            font-size: $font-size-lg;
+        }
+        
+        .file-name {
+            color: $white;
+            font-weight: $font-weight-semibold;
+            font-family: $font-family-mono;
+        }
+    }
+    
+    .file-status-badge {
+        padding: $spacing-xs 0.75rem;
+        border-radius: $radius-sm;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-semibold;
+        text-transform: uppercase;
+        
+        &.added {
+            background: rgba($success-color, 0.2);
+            color: $success-color;
+        }
+        
+        &.removed {
+            background: rgba($danger-color, 0.2);
+            color: $danger-color;
+        }
+        
+        &.modified {
+            background: rgba($warning-color, 0.2);
+            color: #fbbf24;
+        }
+    }
+    
+    .file-stats {
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+        
+        .additions {
+            color: $success-color;
+            font-weight: $font-weight-semibold;
+        }
+        
+        .deletions {
+            color: $danger-color;
+            font-weight: $font-weight-semibold;
+        }
+    }
+    
+    .toggle-diff-btn {
+        background: transparent;
+        border: none;
+        color: rgba($white, 0.7);
+        cursor: pointer;
+        padding: $spacing-sm;
+        transition: color $transition-fast;
+        
+        &:hover {
+            color: $white;
+        }
+    }
+}
+
+.code-diff-content {
+    background: #1a1a1a;
+    font-family: $font-family-mono;
+    font-size: $font-size-sm;
+    overflow-x: auto;
+}
+
+.diff-table {
+    width: 100%;
+}
+
+.diff-line {
+    display: grid;
+    grid-template-columns: 50px 50px 1fr;
+    line-height: 1.6;
+    min-height: 24px;
+    
+    &.added {
+        background: rgba($success-color, 0.15);
+        border-left: 3px solid $success-color;
+        
+        .diff-marker {
+            color: $success-color;
+        }
+    }
+    
+    &.removed {
+        background: rgba($danger-color, 0.15);
+        border-left: 3px solid $danger-color;
+        
+        .diff-marker {
+            color: $danger-color;
+        }
+    }
+    
+    &.context {
+        background: transparent;
+        border-left: 3px solid transparent;
+    }
+    
+    .line-num {
+        color: rgba($white, 0.3);
+        text-align: right;
+        padding: 0 $spacing-sm;
+        user-select: none;
+        font-size: $font-size-xs;
+    }
+    
+    .line-content {
+        color: rgba($white, 0.9);
+        padding: 0 $spacing-md;
+        white-space: pre;
+        overflow-x: auto;
+    }
+    
+    .diff-marker {
+        color: rgba($white, 0.5);
+        margin-right: $spacing-sm;
+    }
+}
+
+.diff-hunk-header {
+    background: rgba($primary-color, 0.1);
+    color: $primary-color;
+    padding: $spacing-sm $spacing-md;
+    font-weight: $font-weight-semibold;
+    border-top: 1px solid rgba($white, 0.05);
+    border-bottom: 1px solid rgba($white, 0.05);
+}
+
+.no-code-changes,
+.no-diff {
+    padding: $spacing-xl;
+    text-align: center;
+    color: rgba($white, 0.5);
+}
+
+// -----------------------------
+// Changelog Empty State
+// -----------------------------
+.changelog-empty {
+    text-align: center;
+    padding: $spacing-xxl;
+    color: rgba($white, 0.6);
+    
+    i {
+        font-size: 3rem;
+        color: $primary-color;
+        margin-bottom: $spacing-md;
+    }
+    
+    p {
+        font-size: $font-size-md;
+    }
+}
