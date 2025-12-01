@@ -3703,7 +3703,7 @@ pre code {
 .score-card .score-label {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: #64748b !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 20px;

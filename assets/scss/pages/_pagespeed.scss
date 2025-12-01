@@ -354,7 +354,7 @@ $ps-score-perfect: #0cce6b;
     .score-label {
         font-size: 13px;
         font-weight: 600;
-        color: $ps-text-secondary;
+        color: $ps-text-secondary!important;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 20px;
