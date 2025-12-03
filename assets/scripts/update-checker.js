@@ -1,18 +1,19 @@
 /**
  * Update Checker
- * Checks for new app versions every hour and shows update banner
+ * Checks for new app versions every 30 seconds and shows update banner
  */
 
 (function() {
     'use strict';
 
-    const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+    const UPDATE_CHECK_INTERVAL = 30 * 1000; // 30 seconds (changed from 1 hour)
     const VERSION_URL = './assets/json/version.json';
     const STORAGE_KEY = 'webp_converter_version';
     const DISMISSED_KEY = 'webp_converter_update_dismissed';
 
     let currentVersion = null;
     let updateBanner = null;
+    let checkIntervalId = null;
 
     /**
      * Initialize the update checker
@@ -27,10 +28,10 @@
         // Check immediately on load
         checkForUpdates();
         
-        // Then check every hour
-        setInterval(checkForUpdates, UPDATE_CHECK_INTERVAL);
+        // Then check every 30 seconds
+        checkIntervalId = setInterval(checkForUpdates, UPDATE_CHECK_INTERVAL);
         
-        console.log('🔄 Update checker initialized');
+        console.log('🔄 Update checker initialized (checking every 30 seconds)');
     }
 
     /**
@@ -68,7 +69,10 @@
         try {
             // Add cache-busting parameter
             const response = await fetch(`${VERSION_URL}?t=${Date.now()}`, {
-                cache: 'no-store'
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
             });
             
             if (!response.ok) {
@@ -76,7 +80,7 @@
             }
             
             const data = await response.json();
-            const newVersion = data.version;
+            const newVersion = data.version || data.timestamp || data.hash;
             const updateMessage = data.message || 'A new version is available!';
             
             console.log(`📦 Current: ${currentVersion || 'none'}, Latest: ${newVersion}`);
@@ -95,8 +99,18 @@
                 return; // User already dismissed this version
             }
             
-            // Compare versions
-            if (newVersion !== currentVersion) {
+            // Compare versions - ANY change triggers update
+            if (String(newVersion) !== String(currentVersion)) {
+                console.log('🆕 New version detected!');
+                console.log('   Old:', currentVersion);
+                console.log('   New:', newVersion);
+                
+                // Stop checking to prevent multiple banners
+                if (checkIntervalId) {
+                    clearInterval(checkIntervalId);
+                    checkIntervalId = null;
+                }
+                
                 showUpdateBanner(updateMessage, newVersion);
             }
             
@@ -117,7 +131,7 @@
         // Adjust body padding to account for banner
         document.body.style.paddingTop = '50px';
         
-        console.log('🆕 Update available:', version);
+        console.log('🎉 Update banner displayed');
     }
 
     /**
@@ -132,6 +146,8 @@
      * Apply the update (reload page)
      */
     function applyUpdate() {
+        console.log('🔄 Applying update...');
+        
         // Clear the stored version so it gets updated after reload
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(DISMISSED_KEY);
@@ -144,14 +160,27 @@
      * Dismiss the update notification
      */
     function dismissUpdate() {
+        console.log('✖️ Update dismissed');
+        
         // Store which version was dismissed
         fetch(`${VERSION_URL}?t=${Date.now()}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
-                localStorage.setItem(DISMISSED_KEY, data.version);
+                const version = data.version || data.timestamp || data.hash;
+                localStorage.setItem(DISMISSED_KEY, version);
+                console.log('💾 Dismissed version saved:', version);
+            })
+            .catch(err => {
+                console.warn('⚠️ Could not save dismissed version:', err);
             });
         
         hideUpdateBanner();
+        
+        // Restart checking after dismissal
+        if (!checkIntervalId) {
+            checkIntervalId = setInterval(checkForUpdates, UPDATE_CHECK_INTERVAL);
+            console.log('▶️ Update checking resumed');
+        }
     }
 
     /**
@@ -164,6 +193,15 @@
      */
     window.showUpdateBanner = function() {
         showUpdateBanner('Test update message!', '9.9.9');
+    };
+
+    /**
+     * Clear version storage (for testing)
+     */
+    window.clearVersionStorage = function() {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(DISMISSED_KEY);
+        console.log('🗑️ Version storage cleared');
     };
 
     // Initialize when DOM is ready
