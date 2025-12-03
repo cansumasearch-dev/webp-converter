@@ -20,6 +20,9 @@ ImageConverter.prototype.displayCurrentStrategy = function() {
         return;
     }
 
+    // Preserve current accordion states before switching
+    this.saveAccordionStates();
+    
     this.displayPageSpeedResults(data, this.pagespeedStrategy);
 };
 
@@ -47,6 +50,14 @@ ImageConverter.prototype.analyzePageSpeed = async function() {
 
     this.isAnalyzingPageSpeed = true;
     console.log('🚀 Starting SIMULTANEOUS mobile + desktop analysis');
+
+    // Reset accordion states for new analysis (all open by default)
+    this.accordionStates = {
+        'performance': true,
+        'accessibility': true,
+        'best-practices': true,
+        'seo': true
+    };
 
     this.pagespeedLoading.classList.remove('d-none');
     this.pagespeedResults.classList.add('d-none');
@@ -211,20 +222,134 @@ ImageConverter.prototype.getAuditsForCategory = function(category, audits) {
 };
 
 // ============================================================
+// ACCORDION STATE MANAGEMENT
+// ============================================================
+
+ImageConverter.prototype.initAccordionStates = function() {
+    if (!this.accordionStates) {
+        this.accordionStates = {
+            'performance': true,
+            'accessibility': true,
+            'best-practices': true,
+            'seo': true
+        };
+    }
+};
+
+ImageConverter.prototype.saveAccordionStates = function() {
+    const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
+    categories.forEach(categoryId => {
+        const card = document.getElementById(`category-${categoryId}`);
+        if (card) {
+            this.accordionStates[categoryId] = card.classList.contains('open');
+        }
+    });
+};
+
+ImageConverter.prototype.restoreAccordionStates = function() {
+    this.initAccordionStates();
+    
+    setTimeout(() => {
+        const categories = ['performance', 'accessibility', 'best-practices', 'seo'];
+        categories.forEach(categoryId => {
+            const content = document.getElementById(`content-${categoryId}`);
+            const card = document.getElementById(`category-${categoryId}`);
+            
+            if (content && card) {
+                const shouldBeOpen = this.accordionStates[categoryId];
+                
+                if (shouldBeOpen) {
+                    card.classList.add('open');
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    const icon = card.querySelector('.accordion-icon');
+                    if (icon) icon.style.transform = 'rotate(180deg)';
+                } else {
+                    card.classList.remove('open');
+                    content.style.maxHeight = '0px';
+                    const icon = card.querySelector('.accordion-icon');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                }
+            }
+        });
+    }, 100);
+};
+
+// ============================================================
+// SCROLL TO CATEGORY
+// ============================================================
+
+ImageConverter.prototype.scrollToCategory = function(categoryId) {
+    const element = document.getElementById(`category-${categoryId}`);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Add a brief highlight effect
+        element.style.transition = 'background-color 0.3s';
+        element.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+        setTimeout(() => {
+            element.style.backgroundColor = '';
+        }, 1000);
+        
+        // Open the accordion if it's closed
+        const content = document.getElementById(`content-${categoryId}`);
+        const card = element;
+        if (content && !card.classList.contains('open')) {
+            this.toggleAccordion(categoryId);
+        }
+    }
+};
+
+// ============================================================
+// ACCORDION TOGGLE
+// ============================================================
+
+ImageConverter.prototype.toggleAccordion = function(categoryId) {
+    const card = document.getElementById(`category-${categoryId}`);
+    const content = document.getElementById(`content-${categoryId}`);
+    const icon = card.querySelector('.accordion-icon');
+    
+    if (!card || !content) return;
+    
+    const isOpen = card.classList.contains('open');
+    
+    if (isOpen) {
+        // Close
+        card.classList.remove('open');
+        content.style.maxHeight = '0px';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+    } else {
+        // Open
+        card.classList.add('open');
+        content.style.maxHeight = content.scrollHeight + 'px';
+        if (icon) icon.style.transform = 'rotate(180deg)';
+    }
+    
+    // Save the new state
+    this.initAccordionStates();
+    this.accordionStates[categoryId] = !isOpen;
+};
+
+// ============================================================
 // CATEGORY ISSUES RENDERING
 // ============================================================
 
 ImageConverter.prototype.renderCategoryIssues = function(categoryName, icon, color, audits) {
+    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
+    
     if (!audits || audits.length === 0) {
         return `
-            <div class="category-issues-card" style="border-left: 4px solid ${color};">
-                <div class="category-header">
-                    <h3><i class="fas ${icon} me-2" style="color: ${color};"></i>${categoryName} Issues</h3>
-                    <span class="issues-count good">0 issues</span>
+            <div class="category-issues-card accordion-card" id="category-${categoryId}" style="border-left: 4px solid ${color};">
+                <div class="category-header accordion-header" onclick="converter.toggleAccordion('${categoryId}')">
+                    <div class="category-title-wrapper">
+                        <h3><i class="fas ${icon} me-2" style="color: ${color};"></i>${categoryName} Issues</h3>
+                        <span class="issues-count good">0 issues</span>
+                    </div>
+                    <i class="fas fa-chevron-down accordion-icon"></i>
                 </div>
-                <div class="no-issues">
-                    <i class="fas fa-check-circle"></i>
-                    <p>All ${categoryName.toLowerCase()} checks passed!</p>
+                <div class="accordion-content" id="content-${categoryId}">
+                    <div class="no-issues">
+                        <i class="fas fa-check-circle"></i>
+                        <p>All ${categoryName.toLowerCase()} checks passed!</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -285,13 +410,18 @@ ImageConverter.prototype.renderCategoryIssues = function(categoryName, icon, col
     const countClass = audits.length > 5 ? 'poor' : audits.length > 2 ? 'average' : 'good';
 
     return `
-        <div class="category-issues-card" style="border-left: 4px solid ${color};">
-            <div class="category-header">
-                <h3><i class="fas ${icon} me-2" style="color: ${color};"></i>${categoryName} Issues</h3>
-                <span class="issues-count ${countClass}">${audits.length} issue${audits.length !== 1 ? 's' : ''}</span>
+        <div class="category-issues-card accordion-card" id="category-${categoryId}" style="border-left: 4px solid ${color};">
+            <div class="category-header accordion-header" onclick="converter.toggleAccordion('${categoryId}')">
+                <div class="category-title-wrapper">
+                    <h3><i class="fas ${icon} me-2" style="color: ${color};"></i>${categoryName} Issues</h3>
+                    <span class="issues-count ${countClass}">${audits.length} issue${audits.length !== 1 ? 's' : ''}</span>
+                </div>
+                <i class="fas fa-chevron-down accordion-icon"></i>
             </div>
-            <div class="issues-list">
-                ${issuesHTML}
+            <div class="accordion-content" id="content-${categoryId}">
+                <div class="issues-list">
+                    ${issuesHTML}
+                </div>
             </div>
         </div>
     `;
@@ -367,33 +497,37 @@ ImageConverter.prototype.displayPageSpeedResults = function(data, strategy) {
             </div>
 
             <div class="score-summary">
-                <div class="score-card">
+                <div class="score-card clickable" onclick="converter.scrollToCategory('performance')">
                     ${comparisonBadge(perfDiff)}
                     <div class="score-label">Performance</div>
                     <div class="score-circle ${this.getScoreClass(performanceScore)}">
                         ${performanceScore}
                     </div>
+                    <div class="click-hint">Click to view details</div>
                 </div>
-                <div class="score-card">
+                <div class="score-card clickable" onclick="converter.scrollToCategory('accessibility')">
                     ${comparisonBadge(accDiff)}
                     <div class="score-label">Accessibility</div>
                     <div class="score-circle ${this.getScoreClass(accessibilityScore)}">
                         ${accessibilityScore}
                     </div>
+                    <div class="click-hint">Click to view details</div>
                 </div>
-                <div class="score-card">
+                <div class="score-card clickable" onclick="converter.scrollToCategory('best-practices')">
                     ${comparisonBadge(bpDiff)}
                     <div class="score-label">Best Practices</div>
                     <div class="score-circle ${this.getScoreClass(bestPracticesScore)}">
                         ${bestPracticesScore}
                     </div>
+                    <div class="click-hint">Click to view details</div>
                 </div>
-                <div class="score-card">
+                <div class="score-card clickable" onclick="converter.scrollToCategory('seo')">
                     ${comparisonBadge(seoDiff)}
                     <div class="score-label">SEO</div>
                     <div class="score-circle ${this.getScoreClass(seoScore)}">
                         ${seoScore}
                     </div>
+                    <div class="click-hint">Click to view details</div>
                 </div>
             </div>
 
@@ -453,6 +587,9 @@ ImageConverter.prototype.displayPageSpeedResults = function(data, strategy) {
 
         this.pagespeedResults.innerHTML = html;
         this.pagespeedResults.classList.remove('d-none');
+
+        // Restore accordion states (or open all on first analysis)
+        this.restoreAccordionStates();
 
     } catch (error) {
         console.error('Error displaying PageSpeed results:', error);

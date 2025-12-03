@@ -3700,6 +3700,23 @@ pre code {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
+.score-card.clickable {
+  cursor: pointer;
+}
+.score-card.clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(66, 133, 244, 0.2);
+}
+.score-card.clickable:hover .click-hint {
+  opacity: 1;
+}
+.score-card.clickable .click-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
 .score-card .score-label {
   font-size: 13px;
   font-weight: 600;
@@ -4301,6 +4318,8 @@ pre code {
   margin-bottom: 24px;
   border: 1px solid #e2e8f0;
   overflow: hidden;
+  scroll-margin-top: 100px;
+  transition: background-color 0.3s ease;
 }
 .category-issues-card .category-header {
   padding: 20px 24px;
@@ -4623,6 +4642,79 @@ pre code {
     transform: rotate(360deg);
   }
 }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.accordion-card {
+  overflow: hidden;
+}
+.accordion-card:not(.open) .accordion-header {
+  border-bottom: none;
+}
+.accordion-card.open .accordion-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+.accordion-card.open .accordion-icon {
+  transform: rotate(180deg);
+}
+.accordion-card.open .accordion-content {
+  padding: 10px 0 10px 0;
+}
+.accordion-card.open .accordion-content > * {
+  animation: fadeIn 0.3s ease forwards;
+}
+.accordion-card .accordion-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  transition: background-color 0.2s ease;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+  background: #fafbfc;
+}
+.accordion-card .accordion-header:hover {
+  background-color: rgba(66, 133, 244, 0.05);
+}
+.accordion-card .category-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+.accordion-card .category-title-wrapper h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.accordion-card .accordion-icon {
+  font-size: 16px;
+  color: #64748b;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+.accordion-card .accordion-content {
+  max-height: 100%;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+.accordion-card .accordion-content .issues-list,
+.accordion-card .accordion-content .no-issues {
+  padding: 0;
+}
+
 .changelog-container {
   padding: 2rem;
   background: #fff;
